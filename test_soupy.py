@@ -114,6 +114,19 @@ class TestNode(object):
         result = getattr(node, method)('b')
         assert len(result) == 0
 
+    def test_iter(self):
+        node = Soupy('<a class="test">test</a>')
+        for a, b in zip(node, node.val()):
+            assert a.val() == b
+
+    def test_call(self):
+        node = Soupy('<a class="test">test</a>')
+        assert node('a').val() == node.val()('a')
+
+    def test_nonnull_returns_self(self):
+        s = Soupy('')
+        assert s.nonnull() == s
+
 
 class TestNavigableString(object):
     """
@@ -213,7 +226,7 @@ class TestNullNode(object):
     def test_select(self):
         assert isinstance(NullNode().select('a'), NullCollection)
 
-    def test_requred_overrides_orelse(self):
+    def test_nonnull_overrides_orelse(self):
         with pytest.raises(NullValueError):
             NullNode().nonnull().orelse(3).val()
 
@@ -279,6 +292,17 @@ class TestCollection(object):
     def test_index_oob(self):
         assert isinstance(Collection([])[5], NullNode)
 
+    def test_bool(self):
+
+        assert Collection([1])
+        assert not Collection([])
+
+    def test_count(self):
+
+        assert Collection([]).count().val() == 0
+        assert Collection([1]).count().val() == 1
+        assert NullCollection().count().val() == 0
+
 
 class TestNullCollection(object):
 
@@ -288,7 +312,7 @@ class TestNullCollection(object):
 
     def test_dump(self):
         with pytest.raises(NullValueError):
-            return NullCollection().dump()
+            return NullCollection().dump().val()
 
     @pytest.mark.parametrize('func', COLLECTION_TO_COLLECTION)
     def test_collection_to_collection_methods(self, func):
@@ -310,35 +334,35 @@ class TestQueries(object):
         node = Soupy('<a>1</a><a>2</a><a>3</a>')
 
         result = node.find_all('a').dump(
-            a=Q.text)
+            a=Q.text).val()
         assert result == [{'a': '1'}, {'a': '2'}, {'a': '3'}]
 
     def test_dump_with_method(self):
         node = Soupy('<a>1</a><a>2</a><a>3</a>')
 
         result = node.find_all('a').dump(
-            a=Q.find('b').orelse(''))
+            a=Q.find('b').orelse('')).val()
         assert result == [{'a': ''}, {'a': ''}, {'a': ''}]
 
     def test_dump_with_getitem(self):
         node = Soupy('<a val="1">1</a>')
 
         result = node.find_all('a').dump(
-            a=Q.attrs["val"])
+            a=Q.attrs["val"]).val()
         assert result == [{'a': "1"}]
 
     def test_dump_with_map(self):
         node = Soupy('<a>1</a><a>2</a><a>3</a>')
 
         result = node.find_all('a').dump(
-            a=Q.text.map(int))
+            a=Q.text.map(int)).val()
         assert result == [{'a': 1}, {'a': 2}, {'a': 3}]
 
     def test_dump_with_multi_map(self):
         node = Soupy('<a>1</a><a>2</a><a>3</a>')
 
         result = node.find_all('a').dump(
-            a=Q.text.map(int).map(lambda x: x * 2))
+            a=Q.text.map(int).map(lambda x: x * 2)).val()
         assert result == [{'a': 2}, {'a': 4}, {'a': 6}]
 
     def test_multi_dump(self):
@@ -346,7 +370,7 @@ class TestQueries(object):
 
         result = node.find_all('a').dump(
             a=Q.text,
-            b=Q.attrs.get('val'))
+            b=Q.attrs.get('val')).val()
         assert result == [{'a': '1', 'b': '1'},
                           {'a': '2', 'b': None},
                           {'a': '3', 'b': '3'}]
@@ -364,7 +388,7 @@ class TestQueries(object):
 
         result = node.find_all('a').dump(
             a=Q.find('b').text.map(int).orelse(0)
-        )
+        ).val()
 
         assert result == [{'a': 1}, {'a': 0}]
 
@@ -418,6 +442,13 @@ class TestExpression(object):
 
         assert (Q <= Q).__eval__(5)
 
+        assert (Q + 5).__eval__(2) == 7
+        assert (Q - 1).__eval__(1) == 0
+        assert (Q * 2).__eval__(4) == 8
+        assert (Q / 2).__eval__(4) == 2.0
+        assert (Q // 2).__eval__(4) == 2
+        assert (Q % 2).__eval__(3) == 1
+        assert (Q ** 2).__eval__(3) == 9
 
 def _public_api(cls):
     return set(item

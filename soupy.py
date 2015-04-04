@@ -21,7 +21,24 @@ class Wrapper(object):
         pass  # pragma: no cover
 
     def nonnull(self):
-        pass  # pragma: no cover
+        """
+        Require that a node is not null
+
+        Null values will raise NullValueError, whereas nonnull
+        values return self.
+
+        useful for being strict about portions of queries.
+
+
+        Examples:
+
+           node.find('a').nonnull().find('b').orelse(3)
+
+           This will raise an error if find('a') doesn't match,
+           but provides a fallback if find('b') doesn't match.
+
+        """
+        return self
 
     @abstractmethod
     def map(self, func):
@@ -35,7 +52,7 @@ class Wrapper(object):
     def wrap(cls, value):
         """
         Wrap value in the appropriate wrapper class,
-        based upon its type
+        based upon its type.
         """
         if isinstance(value, Wrapper):
             return value
@@ -50,30 +67,58 @@ class Wrapper(object):
 
 
 class NullValueError(ValueError):
+    """
+    The NullValueError exception is raised when attempting
+    to extract values from Null objects
+    """
     pass
 
 
 class Null(Wrapper):
+    """
+    This is the base class for null wrappers. Null values are returned
+    when the result of a function is undefined.
+    """
 
     def val(self):
+        """
+        Raise :class:`NullValueError`
+        """
         raise NullValueError()
 
     def orelse(self, value):
+        """
+        Wraps value and returns the result
+        """
         return Wrapper.wrap(value)
 
     def map(self, func):
+        """
+        Returns :class:`Null`
+        """
         return self
 
     def apply(self, func):
+        """
+        Returns :class:`Null`
+        """
         return self
 
     def nonnull(self):
+        """
+        Raises :class:`NullValueError`
+        """
         raise NullValueError()
 
     def __bool__(self):
         return False
 
     __nonzero__ = __bool__
+
+    def __str__(self):
+        return "%s()" % type(self).__name__
+
+    __repr__ = __str__
 
 
 class Some(Wrapper):
@@ -82,20 +127,78 @@ class Some(Wrapper):
         self._value = value
 
     def map(self, func):
+        """
+        Call a function on a wrapper's value, and wrap the result if necessary.
+
+        Parameters:
+
+            func : function(val) -> val
+
+        Examples:
+
+            >>> s = Scalar(3)
+            >>> s.map(Q * 2)
+            Scalar(6)
+        """
         return Wrapper.wrap(_make_callable(func)(self._value))
 
     def apply(self, func):
+        """
+        Call a function on a wrapper, and wrap the result if necessary.
+
+
+        Parameters:
+
+            func: function(wrapper) -> val
+
+        Examples:
+
+            >>> s = Scalar(5)
+            >>> s.apply(lambda val: isinstance(val, Scalar))
+            Scalar(True)
+        """
         return Wrapper.wrap(_make_callable(func)(self))
 
     def orelse(self, value):
+        """
+        Provide a fallback value for failed matches.
+
+        Examples:
+
+            >>> Scalar(5).orelse(10).val()
+            5
+            >>> Null().orelse(10).val()
+            10
+        """
         return self
 
     def val(self):
+        """
+        Return the value inside a wrapper.
+
+        Raises :class:`NullValueError` if called on a Null object
+        """
         return self._value
+
+    def __str__(self):
+        return "%s(%r)" % (type(self).__name__, self._value)
+
+    __repr__ = __str__
 
 
 class Scalar(Some):
+    """
+    A wrapper around single values.
 
+    Scalars support boolean testing (<, ==, etc), and
+    use the wrapped value in the comparison. They return
+    the result as a Scalar(bool).
+
+    Calling a Scalar calls the wrapped value, and wraps
+    the result.
+
+    bool(Scalar) computes bool(Scalar.val()) and returns the result
+    """
     def __getattr__(self, attr):
         return self.map(operator.attrgetter(attr))
 
@@ -125,35 +228,101 @@ class Scalar(Some):
 
     __nonzero__ = __bool__
 
+    def __len__(self):
+        return len(self._value)
+
 
 class Collection(Some):
+    """
+    Collection's store lists of other wrappers.
 
+    They support most of the list methods (len, iter, getitem, etc).
+    """
     def __init__(self, items):
         super(Collection, self).__init__(list(items))
         self._items = self._value
 
     def val(self):
+        """
+        Unwraps each item in the collection, and returns as a list
+        """
         return list(self.iter_val())
 
     def first(self):
+        """
+        Return the first element of the collection, or :class:`Null`
+        """
         return self[0]
 
     def iter_val(self):
+        """
+        An iterator version of :meth:`val`
+        """
         return (item.val() for item in self._items)
 
     def each(self, func):
+        """
+        Call `func` on each element in the collection
+
+        Returns a new Collection.
+        """
         func = _make_callable(func)
         return Collection(imap(func, self._items))
 
     def filter(self, func):
+        """
+        Return a new Collection with some items removed.
+
+        Parameters:
+
+            func : function(Node) -> Node
+
+        Returns:
+
+            A new Collection consisting of the items
+            where bool(func(item)) == True
+
+        Examples:
+
+            >>> node.find_all('a').filter(Q['href'].startswith('http'))
+        """
         func = _make_callable(func)
         return Collection(filter(func, self._items))
 
     def takewhile(self, func):
+        """
+        Return a new Collection with the last few items removed.
+
+        Parameters:
+
+            func : function(Node) -> Node
+
+        Returns:
+
+            A new Collection, discarding all items
+            at and after the first item where bool(func(item)) == False
+
+        Examples:
+
+            >>> node.find_all('tr').takewhile(Q.find_all('td').count() > 3)
+
+        """
         func = _make_callable(func)
         return Collection(takewhile(func, self._items))
 
     def dropwhile(self, func):
+        """
+        Return a new Collection with the first few items removed.
+
+        Parameters:
+
+            func : function(Node) -> Node
+
+        Returns:
+
+            A new Collection, discarding all items
+            before the first item where bool(func(item)) == True
+        """
         func = _make_callable(func)
         return Collection(dropwhile(func, self._items))
 
@@ -168,14 +337,37 @@ class Collection(Some):
         return Collection(list(self._items).__getitem__(key))
 
     def dump(self, *args, **kwargs):
-        return self.each(Q._dump(**kwargs)).val()
+        """
+        Build a list of dicts, by calling :meth:`Node.dump`
+        on each item.
+
+        Each keyword provides a function that extracts a value
+        from a Node.
+
+        Examples:
+
+            >>> c = Collection([Scalar(1), Scalar(2)])
+            >>> c.dump(x2=Q*2, m1=Q-1).val()
+            [{'x2': 2, 'm1': 0}, {'x2': 4, 'm1': 1}]
+        """
+        return self.each(Q.dump(**kwargs))
 
     def __len__(self):
         return self.map(len).val()
 
+    def count(self):
+        """
+        Return the number of items in the collection, as a :class:`Scalar`
+        """
+        return Scalar(len(self))
+
 
 class NullCollection(Null, Collection):
+    """
+    Represents in invalid Collection.
 
+    Returned by some methods on other Null objects.
+    """
     def __init__(self):
         pass
 
@@ -204,8 +396,11 @@ class NullCollection(Null, Collection):
         # slice
         return self
 
-    def dump(self):
-        raise NullValueError()
+    def dump(self, **kwargs):
+        return NullCollection()
+
+    def count(self):
+        return Scalar(0)
 
 
 @add_metaclass(ABCMeta)
@@ -267,10 +462,22 @@ class NodeLike(object):
     def find_parents(self, *args, **kwargs):
         pass  # pragma: no cover
 
+    def __iter__(self):
+        for item in self.children:
+            yield item
+
+    def __call__(self, *args, **kwargs):
+        return self.find_all(*args, **kwargs)
+
 
 class Node(NodeLike, Some):
-
-    def __new__(cls, value):
+    """
+    The Node class is the main wrapper around
+    BeautifulSoup elements like Tag. It implements many of the
+    same properties and methods as BeautifulSoup for navigating
+    through documents, like find, select, parents, etc.
+    """
+    def __new__(cls, value, *args, **kwargs):
         if isinstance(value, NavigableString):
             return object.__new__(NavigableStringNode)
 
@@ -290,132 +497,288 @@ class Node(NodeLike, Some):
 
     @property
     def children(self):
+        """
+        A :class:`Collection` of the child elements.
+        """
         return self._wrap_multi(operator.attrgetter('children'))
 
     @property
     def parents(self):
+        """
+        A :class:`Collection` of the parents elements.
+        """
         return self._wrap_multi(operator.attrgetter('parents'))
 
     @property
     def contents(self):
+        """
+        A :class:`Collection` of the child elements.
+        """
         return self._wrap_multi(operator.attrgetter('contents'))
 
     @property
     def descendants(self):
+        """
+        A :class:`Collection` of all elements nested inside this Node.
+        """
         return self._wrap_multi(operator.attrgetter('descendants'))
 
     @property
     def next_siblings(self):
+        """
+        A :class:`Collection` of all siblings after this node
+        """
         return self._wrap_multi(operator.attrgetter('next_siblings'))
 
     @property
     def previous_siblings(self):
+        """
+        A :class:`Collection` of all siblings before this node
+        """
         return self._wrap_multi(operator.attrgetter('previous_siblings'))
 
     @property
     def parent(self):
+        """
+        The parent :class:`Node`, or :class:`NullNode`
+        """
         return self._wrap_node(operator.attrgetter('parent'))
 
     @property
     def next_sibling(self):
+        """
+        The :class:`Node` sibling after this, or :class:`NullNode`
+        """
         return self._wrap_node(operator.attrgetter('next_sibling'))
 
     @property
     def previous_sibling(self):
+        """
+        The :class:`Node` sibling prior to this, or :class:`NullNode`
+        """
         return self._wrap_node(operator.attrgetter('previous_sibling'))
 
     @property
     def attrs(self):
+        """
+        A :class:`Scalar` of this Node's attribute dictionary
+
+        Example:
+
+            >>> Soupy("<a val=3></a>").find('a').attrs
+            Scalar({'val': '3'})
+        """
         return self._wrap_scalar(operator.attrgetter('attrs'))
 
     @property
     def text(self):
+        """
+        A :class:`Scalar` of this Node's text.
+
+        Example:
+
+            >>> node
+            Node("<p>hi there</p>")
+            >>> node.text
+            Scalar("hi there")
+
+        """
         return self._wrap_scalar(operator.attrgetter('text'))
 
     @property
     def name(self):
+        """
+        A :class:`Scalar` of this Node's tag name.
+
+        Example:
+
+            >>> node
+            Node("<p>hi there</p>")
+            >>> node.name
+            Scalar(p)
+        """
         return self._wrap_scalar(operator.attrgetter('name'))
 
     def find(self, *args, **kwargs):
+        """
+        Find a single Node among this Node's descendants.
+
+        Returns :class:`NullNode` if nothing matches.
+
+        This inputs to this function follow the same semantics
+        as BeautifulSoup. See http://bit.ly/bs4doc for more info.
+
+        Examples:
+
+         - node.find('a')  # look for `a` tags
+         - node.find('a', 'foo') # look for `a` tags with class=`foo`
+         - node.find(func) # find tag where func(tag) is True
+         - node.find(val=3)  # look for tag like <a, val=3>
+        """
         op = operator.methodcaller('find', *args, **kwargs)
         return self._wrap_node(op)
 
     def find_next_sibling(self, *args, **kwargs):
+        """
+        Like :meth:`find`, but searches through :attr:`next_siblings`
+        """
         op = operator.methodcaller('find_next_sibling', *args, **kwargs)
         return self._wrap_node(op)
 
     def find_parent(self, *args, **kwargs):
+        """
+        Like :meth:`find`, but searches through :attr:`parents`
+        """
         op = operator.methodcaller('find_parent', *args, **kwargs)
         return self._wrap_node(op)
 
     def find_previous_sibling(self, *args, **kwargs):
+        """
+        Like :meth:`find`, but searches through :attr:`previous_siblings`
+        """
         op = operator.methodcaller('find_previous_sibling', *args, **kwargs)
         return self._wrap_node(op)
 
     def find_all(self, *args, **kwargs):
+        """
+        Like :meth:`find`, but selects all matches (not just the first one).
+
+        Returns a :class:`Collection`.
+
+        If no elements match, this returns a Collection with no items.
+        """
         op = operator.methodcaller('find_all', *args, **kwargs)
         return self._wrap_multi(op)
 
     def find_next_siblings(self, *args, **kwargs):
+        """
+        Like :meth:`find_all`, but searches through :attr:`next_siblings`
+        """
         op = operator.methodcaller('find_next_siblings', *args, **kwargs)
         return self._wrap_multi(op)
 
     def find_parents(self, *args, **kwargs):
+        """
+        Like :meth:`find_all`, but searches through :attr:`parents`
+        """
         op = operator.methodcaller('find_parents', *args, **kwargs)
         return self._wrap_multi(op)
 
     def find_previous_siblings(self, *args, **kwargs):
+        """
+        Like :meth:`find_all`, but searches through :attr:`previous_siblings`
+        """
         op = operator.methodcaller('find_previous_siblings', *args, **kwargs)
         return self._wrap_multi(op)
 
     def select(self, selector):
+        """
+        Like :meth:`find_all`, but takes a CSS selector string as input.
+        """
         op = operator.methodcaller('select', selector)
         return self._wrap_multi(op)
 
-    def _dump(self, **kwargs):
-        result = dict((name, _make_callable(func)(self).val())
+    def dump(self, **kwargs):
+        """
+        Extract derived values into a Scalar(dict)
+
+        The keyword names passed to this function become keys in
+        the resulting dictionary.
+
+        The keyword values are functions that are called on this Node.
+
+        Notes:
+
+            - The input functions are called on the Node, **not** the
+              underlying BeautifulSoup element
+            - If the function returns a wrapper, it will be unwrapped
+
+        Example:
+
+            >>> soup = Soupy("<b>hi</b>").find('b')
+            >>> soup.dump(name=Q.name, text=Q.text).val()
+            {'name': 'b', 'text': 'hi'}
+
+        """
+        result = dict((name, _unwrap(self.apply(func)))
                       for name, func in kwargs.items())
         return Wrapper.wrap(result)
 
 
 class NavigableStringNode(Node):
+    """
+    The NavigableStringNode is a special case Node that wraps
+    BeautifulSoup NavigableStrings. This class implements sensible
+    versions of properties and methods that are missing from
+    the NavigableString object.
+    """
 
     @property
     def attrs(self):
+        """
+        An empty :class:`Scalar` dict
+        """
         return Scalar({})
 
     @property
     def text(self):
+        """
+        A :class:`Scalar` of the string value
+        """
         return Scalar(self._value.string)
 
     @property
     def name(self):
+        """
+        An empty :class:`Scalar` dict
+        """
         return Scalar('')
 
     @property
     def children(self):
+        """
+        An empty :class:`Collection`
+        """
         return Collection([])
 
     @property
     def contents(self):
+        """
+        An empty :class:`Collection`
+        """
         return Collection([])
 
     @property
     def descendants(self):
+        """
+        An empty :class:`Collection`
+        """
         return Collection([])
 
     def find(self, *args, **kwargs):
+        """
+        Returns :class:`NullNode`
+        """
         return NullNode()
 
     def find_all(self, *args, **kwargs):
+        """
+        Returns an empty :class:`Collection`
+        """
         return Collection([])
 
     def select(self, selector):
+        """
+        Returns an empty :class:`Collection`
+        """
         return Collection([])
 
 
 class NullNode(NodeLike, Null):
-
+    """
+    NullNode is returned when a query doesn't match any node
+    in the document.
+    """
     def _get_null(self):
         return NullNode()
 
@@ -438,35 +801,86 @@ class NullNode(NodeLike, Null):
     name = property(lambda self: Null())
 
     def find(self, *args, **kwargs):
+        """
+        Returns :class:`NullNode`
+        """
         return NullNode()
 
     def find_parent(self, *args, **kwargs):
+        """
+        Returns :class:`NullNode`
+        """
         return NullNode()
 
     def find_previous_sibling(self, *args, **kwargs):
+        """
+        Returns :class:`NullNode`
+        """
         return NullNode()
 
     def find_next_sibling(self, *args, **kwargs):
+        """
+        Returns :class:`NullNode`
+        """
         return NullNode()
 
     def find_all(self, *args, **kwargs):
+        """
+        Returns :class:`NullCollection`
+        """
         return NullCollection()
 
     def find_parents(self, *args, **kwargs):
+        """
+        Returns :class:`NullCollection`
+        """
         return NullCollection()
 
     def find_next_siblings(self, *args, **kwargs):
+        """
+        Returns :class:`NullCollection`
+        """
         return NullCollection()
 
     def find_previous_siblings(self, *args, **kwargs):
+        """
+        Returns :class:`NullCollection`
+        """
         return NullCollection()
 
     def select(self, selector):
+        """
+        Returns :class:`NullCollection`
+        """
         return NullCollection()
+
+    def dump(self, **kwargs):
+        """
+        Returns :class:`Null`
+        """
+        return Null()
 
 
 def either(*funcs):
+    """
+    A utility function for selecting the first non-null query.
 
+    Parameters:
+
+      funcs: One or more functions
+
+    Returns:
+
+       A function that, when called with a :class:`Node`, will
+       pass the input to each `func`, and return the first non-Falsey
+       result.
+
+    Examples:
+
+       >>> s = Soupy("<p>hi</p>")
+       >>> s.apply(either(Q.find('a'), Q.find('p').text))
+       Scalar('hi')
+    """
     def either(val):
         for func in funcs:
             result = val.apply(func)
@@ -518,6 +932,30 @@ class Expression(object):
 
     def __ne__(self, other):
         return BinaryOp(operator.ne, self, other)
+
+    def __add__(self, other):
+        return BinaryOp(operator.add, self, other)
+
+    def __sub__(self, other):
+        return BinaryOp(operator.sub, self, other)
+
+    def __div__(self, other):
+        return BinaryOp(operator.div, self, other)
+
+    def __floordiv__(self, other):
+        return BinaryOp(operator.div, self, other)
+
+    def __truediv__(self, other):
+        return BinaryOp(operator.truediv, self, other)
+
+    def __mul__(self, other):
+        return BinaryOp(operator.mul, self, other)
+
+    def __pow__(self, other):
+        return BinaryOp(operator.pow, self, other)
+
+    def __mod__(self, other):
+        return BinaryOp(operator.mod, self, other)
 
     def __eval__(self, val):
         return val
@@ -587,11 +1025,17 @@ def _make_callable(func):
     return getattr(func, '__eval__', func)
 
 
+def _unwrap(val):
+    if isinstance(val, Wrapper):
+        return val.val()
+    return val
+
+
 class Soupy(Node):
 
-    def __init__(self, val):
+    def __init__(self, val, *args, **kwargs):
         if not isinstance(val, PageElement):
-            val = BeautifulSoup(val)
+            val = BeautifulSoup(val, *args, **kwargs)
         super(Soupy, self).__init__(val)
 
 
