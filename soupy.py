@@ -65,6 +65,32 @@ class Wrapper(object):
     def __getitem__(self, key):
         return self.map(operator.itemgetter(key))
 
+    def dump(self, **kwargs):
+        """
+        Extract derived values into a Scalar(dict)
+
+        The keyword names passed to this function become keys in
+        the resulting dictionary.
+
+        The keyword values are functions that are called on this Node.
+
+        Notes:
+
+            - The input functions are called on the Node, **not** the
+              underlying BeautifulSoup element
+            - If the function returns a wrapper, it will be unwrapped
+
+        Example:
+
+            >>> soup = Soupy("<b>hi</b>").find('b')
+            >>> soup.dump(name=Q.name, text=Q.text).val()
+            {'text': u'hi', 'name': 'b'}
+
+        """
+        result = dict((name, _unwrap(self.apply(func)))
+                      for name, func in kwargs.items())
+        return Wrapper.wrap(result)
+
 
 class NullValueError(ValueError):
     """
@@ -231,6 +257,30 @@ class Scalar(Some):
     def __len__(self):
         return len(self._value)
 
+    def __add__(self, other):
+        return self.map(Q + other)
+
+    def __sub__(self, other):
+        return self.map(Q - other)
+
+    def __mul__(self, other):
+        return self.map(Q * other)
+
+    def __div__(self, other):
+        return self.map(Q / other)
+
+    def __floordiv__(self, other):
+        return self.map(Q // other)
+
+    def __pow__(self, other):
+        return self.map(Q ** other)
+
+    def __mod__(self, other):
+        return self.map(Q % other)
+
+    def __truediv__(self, other):
+        return self.map(Q / other)
+
 
 class Collection(Some):
     """
@@ -284,7 +334,7 @@ class Collection(Some):
 
         Examples:
 
-            >>> node.find_all('a').filter(Q['href'].startswith('http'))
+            node.find_all('a').filter(Q['href'].startswith('http'))
         """
         func = _make_callable(func)
         return Collection(filter(func, self._items))
@@ -304,7 +354,7 @@ class Collection(Some):
 
         Examples:
 
-            >>> node.find_all('tr').takewhile(Q.find_all('td').count() > 3)
+            node.find_all('tr').takewhile(Q.find_all('td').count() > 3)
 
         """
         func = _make_callable(func)
@@ -577,10 +627,11 @@ class Node(NodeLike, Some):
 
         Example:
 
+            >>> node = Soupy('<p>hi there</p>').find('p')
             >>> node
-            Node("<p>hi there</p>")
+            Node(<p>hi there</p>)
             >>> node.text
-            Scalar("hi there")
+            Scalar(u'hi there')
 
         """
         return self._wrap_scalar(operator.attrgetter('text'))
@@ -592,10 +643,11 @@ class Node(NodeLike, Some):
 
         Example:
 
+            >>> node = Soupy('<p>hi there</p>').find('p')
             >>> node
-            Node("<p>hi there</p>")
+            Node(<p>hi there</p>)
             >>> node.name
-            Scalar(p)
+            Scalar('p')
         """
         return self._wrap_scalar(operator.attrgetter('name'))
 
@@ -677,32 +729,6 @@ class Node(NodeLike, Some):
         """
         op = operator.methodcaller('select', selector)
         return self._wrap_multi(op)
-
-    def dump(self, **kwargs):
-        """
-        Extract derived values into a Scalar(dict)
-
-        The keyword names passed to this function become keys in
-        the resulting dictionary.
-
-        The keyword values are functions that are called on this Node.
-
-        Notes:
-
-            - The input functions are called on the Node, **not** the
-              underlying BeautifulSoup element
-            - If the function returns a wrapper, it will be unwrapped
-
-        Example:
-
-            >>> soup = Soupy("<b>hi</b>").find('b')
-            >>> soup.dump(name=Q.name, text=Q.text).val()
-            {'name': 'b', 'text': 'hi'}
-
-        """
-        result = dict((name, _unwrap(self.apply(func)))
-                      for name, func in kwargs.items())
-        return Wrapper.wrap(result)
 
 
 class NavigableStringNode(Node):

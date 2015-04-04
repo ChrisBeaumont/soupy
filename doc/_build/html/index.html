@@ -1,0 +1,413 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Welcome to the Soupy documentation &mdash; soupy 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/click.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="soupy 0.1 documentation" href="#" />
+    <link rel="next" title="Soupy API Documentation" href="api.html" />
+   
+
+  </head>
+  <body role="document">
+  
+  
+  <div class=indexwrapper>
+  
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="api.html" title="Soupy API Documentation"
+             accesskey="N">next</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">soupy 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="welcome-to-the-soupy-documentation">
+<h1>Welcome to the Soupy documentation<a class="headerlink" href="#welcome-to-the-soupy-documentation" title="Permalink to this headline">¶</a></h1>
+<p>Soupy is a wrapper around <a class="reference external" href="http://www.crummy.com/software/BeautifulSoup/">BeautifulSoup</a> that makes it easier to
+search through HTML and XML documents.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">soupy</span> <span class="kn">import</span> <span class="n">Soupy</span><span class="p">,</span> <span class="n">Q</span>
+
+<span class="n">html</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;</span>
+<span class="s">&lt;div id=&quot;main&quot;&gt;</span>
+<span class="s">  &lt;div&gt;The web is messy&lt;/div&gt;</span>
+<span class="s">  and full of traps</span>
+<span class="s">  &lt;div&gt;but Soupy loves you&lt;/div&gt;</span>
+<span class="s">&lt;/div&gt;&quot;&quot;&quot;</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">Soupy</span><span class="p">(</span><span class="n">html</span><span class="p">)</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s">&#39;main&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">children</span>
+      <span class="o">.</span><span class="n">each</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span> <span class="c"># extract text from each node, trim whitespace</span>
+      <span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="nb">len</span><span class="p">)</span>          <span class="c"># remove empty strings</span>
+      <span class="o">.</span><span class="n">val</span><span class="p">())</span>               <span class="c"># dump out of Soupy</span>
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>[u&#39;The web is messy&#39;, u&#39;and full of traps&#39;, u&#39;but Soupy loves you&#39;]
+</pre></div>
+</div>
+<p>Compare to the same task in BeautifulSoup:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">bs4</span> <span class="kn">import</span> <span class="n">BeautifulSoup</span><span class="p">,</span> <span class="n">NavigableString</span>
+
+<span class="n">html</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;</span>
+<span class="s">&lt;div id=&quot;main&quot;&gt;</span>
+<span class="s">  &lt;div&gt;The web is messy&lt;/div&gt;</span>
+<span class="s">  and full of traps</span>
+<span class="s">  &lt;div&gt;but Soupy loves you&lt;/div&gt;</span>
+<span class="s">&lt;/div&gt;&quot;&quot;&quot;</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">html</span><span class="p">)</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s">&#39;main&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">NavigableString</span><span class="p">):</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>[u&#39;The web is messy&#39;, u&#39;and full of traps&#39;, u&#39;but Soupy loves you&#39;]
+</pre></div>
+</div>
+<p>Soupy uses BeautifulSoup under the hood and provides a very similar API,
+while smoothing over some of the warts in BeautifulSoup. Soupy also
+adds a functional interface for chaining together operations,
+gracefully dealing with failed searches, and extracting data into
+simpler formats.</p>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre>pip install soupy
+</pre></div>
+</div>
+<p>or download the <a class="reference external" href="http://github.com/ChrisBeaumont/soupy">GitHub source</a>.</p>
+</div>
+<div class="section" id="quickstart">
+<h2>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this headline">¶</a></h2>
+<p>Soupy wraps BeautifulSoup objects inside special wrappers:</p>
+<blockquote>
+<div><ul class="simple">
+<li>A <a class="reference internal" href="api.html#soupy.Node" title="soupy.Node"><code class="xref py py-class docutils literal"><span class="pre">Node</span></code></a> wraps a BeautifulSoup DOM object like a <a class="reference external" href="http://www.crummy.com/software/BeautifulSoup/bs4/doc/#tag">Tag</a>
+or a <a class="reference external" href="http://www.crummy.com/software/BeautifulSoup/bs4/doc/#navigablestring">NavigableString</a>.</li>
+<li>A <a class="reference internal" href="api.html#soupy.Collection" title="soupy.Collection"><code class="xref py py-class docutils literal"><span class="pre">Collection</span></code></a> wraps a list of other wrappers together.</li>
+<li>A <a class="reference internal" href="api.html#soupy.Scalar" title="soupy.Scalar"><code class="xref py py-class docutils literal"><span class="pre">Scalar</span></code></a> wraps other objects (numbers, strings, dicts, etc).</li>
+</ul>
+</div></blockquote>
+<p>The most important object is <a class="reference internal" href="api.html#soupy.Node" title="soupy.Node"><code class="xref py py-class docutils literal"><span class="pre">Node</span></code></a>. It behaves very similarly
+to a BeautifulSoup <code class="docutils literal"><span class="pre">Tag</span></code>, but its behavior is more predictable.</p>
+<p>When BeautifulSoup is well-behaved, Soupy code is basically
+identical:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">html</span> <span class="o">=</span> <span class="s">&quot;&lt;html&gt;Hello&lt;b&gt;world&lt;/b&gt;&lt;/html&gt;&quot;</span>
+<span class="n">bs</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">html</span><span class="p">)</span>
+<span class="n">soup</span> <span class="o">=</span> <span class="n">Soupy</span><span class="p">(</span><span class="n">html</span><span class="p">)</span>
+
+<span class="n">bs_val</span> <span class="o">=</span> <span class="n">bs</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;b&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+<span class="n">soup_val</span> <span class="o">=</span> <span class="n">soup</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;b&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">val</span><span class="p">()</span>
+<span class="k">assert</span> <span class="n">bs_val</span> <span class="o">==</span> <span class="n">soup_val</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">bs_val</span> <span class="o">=</span> <span class="n">bs</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;b&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span>
+<span class="n">soup_val</span> <span class="o">=</span> <span class="n">soup</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;b&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">val</span><span class="p">()</span>
+<span class="k">assert</span> <span class="n">bs_val</span> <span class="o">==</span> <span class="n">soup_val</span>
+</pre></div>
+</div>
+<p>Notice that in these examples, the only difference is that
+you always call <code class="docutils literal"><span class="pre">val()</span></code> to pull data out of a Soupy wrapper
+when you are ready.</p>
+<p>Things get more interesting when we look at corner cases (and
+the web is <em>full</em> of corner cases). For example,
+consider what happens when a search doesn&#8217;t match anything:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">bs</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;b&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;a&#39;</span><span class="p">)</span>   <span class="c"># AttributeError</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">soup</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;b&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;a&#39;</span><span class="p">)</span>
+<span class="go">NullNode()</span>
+</pre></div>
+</div>
+<p>BeautifulSoup returns <code class="docutils literal"><span class="pre">None</span></code> when a match fails, which makes it
+impossible to chain expressions together. Soupy returns
+a <code class="docutils literal"><span class="pre">NullNode</span></code>, which can be further chained without
+raising exceptions. Of course, since <code class="docutils literal"><span class="pre">NullNode</span></code> represents
+a failed match, trying to extract any data raises an error:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">soup</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;b&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;a&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">val</span><span class="p">()</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="c">...</span>
+<span class="gr">NullValueError</span>:
+</pre></div>
+</div>
+<p>However the <a class="reference internal" href="api.html#soupy.Node.orelse" title="soupy.Node.orelse"><code class="xref py py-meth docutils literal"><span class="pre">Node.orelse()</span></code></a> method can be used to specify a fallback
+value when a query doesn&#8217;t match:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">soup</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;b&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;a&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">orelse</span><span class="p">(</span><span class="s">&#39;Not Found&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">val</span><span class="p">()</span>
+<span class="go">&#39;Not Found&#39;</span>
+</pre></div>
+</div>
+<p>There are lots of little corner cases like this in BeautifulSoup &#8211;
+sometimes functions return strings instead of Tags, sometimes they
+return None, sometimes certain methods or attributes aren&#8217;t
+defined.</p>
+<p>Soupy&#8217;s API is more predictable, and better suited for searching through
+messily-formated documents. Here are the main properties and methods
+copied over from BeautifulSoup. All of these features perform the same
+conceptual task as in BeautifulSoup, but they <em>always</em> return the same
+wrapper class.</p>
+<ul class="simple">
+<li>Properties and Methods that return <a class="reference internal" href="api.html#soupy.Node" title="soupy.Node"><code class="xref py py-class docutils literal"><span class="pre">Node</span></code></a> (or <a class="reference internal" href="api.html#soupy.NullNode" title="soupy.NullNode"><code class="xref py py-class docutils literal"><span class="pre">NullNode</span></code></a>)</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li><a class="reference internal" href="api.html#soupy.Node.parent" title="soupy.Node.parent"><code class="xref py py-attr docutils literal"><span class="pre">Node.parent</span></code></a></li>
+<li><a class="reference internal" href="api.html#soupy.Node.next_sibling" title="soupy.Node.next_sibling"><code class="xref py py-attr docutils literal"><span class="pre">Node.next_sibling</span></code></a></li>
+<li><a class="reference internal" href="api.html#soupy.Node.previous_sibling" title="soupy.Node.previous_sibling"><code class="xref py py-attr docutils literal"><span class="pre">Node.previous_sibling</span></code></a></li>
+<li><a class="reference internal" href="api.html#soupy.Node.find" title="soupy.Node.find"><code class="xref py py-meth docutils literal"><span class="pre">Node.find()</span></code></a></li>
+<li><a class="reference internal" href="api.html#soupy.Node.find_parent" title="soupy.Node.find_parent"><code class="xref py py-meth docutils literal"><span class="pre">Node.find_parent()</span></code></a></li>
+<li><a class="reference internal" href="api.html#soupy.Node.find_next_sibling" title="soupy.Node.find_next_sibling"><code class="xref py py-meth docutils literal"><span class="pre">Node.find_next_sibling()</span></code></a></li>
+<li><a class="reference internal" href="api.html#soupy.Node.find_previous_sibling" title="soupy.Node.find_previous_sibling"><code class="xref py py-meth docutils literal"><span class="pre">Node.find_previous_sibling()</span></code></a></li>
+</ul>
+</div></blockquote>
+<ul class="simple">
+<li>Properties that return <a class="reference internal" href="api.html#soupy.Scalar" title="soupy.Scalar"><code class="xref py py-class docutils literal"><span class="pre">Scalar</span></code></a> (or <a class="reference internal" href="api.html#soupy.Null" title="soupy.Null"><code class="xref py py-class docutils literal"><span class="pre">Null</span></code></a>)</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li><a class="reference internal" href="api.html#soupy.Node.text" title="soupy.Node.text"><code class="xref py py-attr docutils literal"><span class="pre">Node.text</span></code></a></li>
+<li><a class="reference internal" href="api.html#soupy.Node.attrs" title="soupy.Node.attrs"><code class="xref py py-attr docutils literal"><span class="pre">Node.attrs</span></code></a></li>
+<li><a class="reference internal" href="api.html#soupy.Node.name" title="soupy.Node.name"><code class="xref py py-attr docutils literal"><span class="pre">Node.name</span></code></a></li>
+</ul>
+</div></blockquote>
+<ul class="simple">
+<li>Properties and Methods that return a <a class="reference internal" href="api.html#soupy.Collection" title="soupy.Collection"><code class="xref py py-class docutils literal"><span class="pre">Collection</span></code></a> of Nodes</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li><a class="reference internal" href="api.html#soupy.Node.children" title="soupy.Node.children"><code class="xref py py-attr docutils literal"><span class="pre">Node.children</span></code></a></li>
+<li><a class="reference internal" href="api.html#soupy.Node.contents" title="soupy.Node.contents"><code class="xref py py-attr docutils literal"><span class="pre">Node.contents</span></code></a></li>
+<li><a class="reference internal" href="api.html#soupy.Node.descendants" title="soupy.Node.descendants"><code class="xref py py-attr docutils literal"><span class="pre">Node.descendants</span></code></a></li>
+<li><a class="reference internal" href="api.html#soupy.Node.parents" title="soupy.Node.parents"><code class="xref py py-attr docutils literal"><span class="pre">Node.parents</span></code></a></li>
+<li><a class="reference internal" href="api.html#soupy.Node.next_siblings" title="soupy.Node.next_siblings"><code class="xref py py-attr docutils literal"><span class="pre">Node.next_siblings</span></code></a></li>
+<li><a class="reference internal" href="api.html#soupy.Node.previous_siblings" title="soupy.Node.previous_siblings"><code class="xref py py-attr docutils literal"><span class="pre">Node.previous_siblings</span></code></a></li>
+<li><a class="reference internal" href="api.html#soupy.Node.find_all" title="soupy.Node.find_all"><code class="xref py py-meth docutils literal"><span class="pre">Node.find_all()</span></code></a></li>
+<li><a class="reference internal" href="api.html#soupy.Node.select" title="soupy.Node.select"><code class="xref py py-meth docutils literal"><span class="pre">Node.select()</span></code></a></li>
+<li><a class="reference internal" href="api.html#soupy.Node.find_parents" title="soupy.Node.find_parents"><code class="xref py py-meth docutils literal"><span class="pre">Node.find_parents()</span></code></a></li>
+<li><a class="reference internal" href="api.html#soupy.Node.find_next_siblings" title="soupy.Node.find_next_siblings"><code class="xref py py-meth docutils literal"><span class="pre">Node.find_next_siblings()</span></code></a></li>
+<li><a class="reference internal" href="api.html#soupy.Node.find_previous_siblings" title="soupy.Node.find_previous_siblings"><code class="xref py py-meth docutils literal"><span class="pre">Node.find_previous_siblings()</span></code></a></li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="functional-api">
+<h2>Functional API<a class="headerlink" href="#functional-api" title="Permalink to this headline">¶</a></h2>
+<p>So far we have explored how Soupy wrappers allow us to chain together
+familiar features from the BeautifulSoup API, without worrying about
+corner cases at each step in the chain.</p>
+<p>Soupy also provides new functions that enable us to build richer
+expressions than what is possible with BeautifulSoup.</p>
+<div class="section" id="iterating-over-results-with-each-and-dump">
+<h3>Iterating over results with each and dump<a class="headerlink" href="#iterating-over-results-with-each-and-dump" title="Permalink to this headline">¶</a></h3>
+<p>A common pattern in BeautifulSoup is to iterate over results from a
+call like <a class="reference internal" href="api.html#soupy.Node.find_all" title="soupy.Node.find_all"><code class="xref py py-meth docutils literal"><span class="pre">find_all()</span></code></a> using a list comprehension. For example,
+consider the query to extract all the movie Titles on <a class="reference external" href="http:;//chrisbeaumont.github.io/soupy/imdb_demo.html">this IMDB page</a></p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">requests</span>
+<span class="n">url</span> <span class="o">=</span> <span class="s">&#39;http://chrisbeaumont.github.io/soupy/imdb_demo.html&#39;</span>
+<span class="n">html</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+<span class="n">bs</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">html</span><span class="p">,</span> <span class="s">&#39;html.parser&#39;</span><span class="p">)</span>
+<span class="n">soup</span> <span class="o">=</span> <span class="n">Soupy</span><span class="p">(</span><span class="n">html</span><span class="p">,</span> <span class="s">&#39;html.parser&#39;</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">([</span><span class="n">node</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;a&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+       <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">bs</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s">&#39;td&#39;</span><span class="p">,</span> <span class="s">&#39;title&#39;</span><span class="p">)])</span>
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>[u&#39;The Shawshank Redemption&#39;, u&#39;The Dark Knight&#39;, u&#39;Inception&#39;,...]
+</pre></div>
+</div>
+<p>Soupy provides an alternative syntax via the <a class="reference internal" href="api.html#soupy.Collection.each" title="soupy.Collection.each"><code class="xref py py-meth docutils literal"><span class="pre">each()</span></code></a> method:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">print</span><span class="p">(</span><span class="n">soup</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s">&#39;td&#39;</span><span class="p">,</span> <span class="s">&#39;title&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">each</span><span class="p">(</span><span class="k">lambda</span> <span class="n">node</span><span class="p">:</span> <span class="n">node</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;a&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">val</span><span class="p">())</span>
+<span class="go">[u&#39;The Shawshank Redemption&#39;,...]</span>
+</pre></div>
+</div>
+<p><a class="reference internal" href="api.html#soupy.Collection.each" title="soupy.Collection.each"><code class="xref py py-meth docutils literal"><span class="pre">Collection.each()</span></code></a> applies a function to every node in a collection, and
+wraps the result into a new collection.</p>
+<p>Because typing <code class="docutils literal"><span class="pre">lambda</span></code> all the time is cumbersome, Soupy
+also has a shorthand <code class="docutils literal"><span class="pre">Q</span></code> object to make this task easier. This same
+query can be written as</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">print</span><span class="p">(</span><span class="n">soup</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s">&#39;td&#39;</span><span class="p">,</span> <span class="s">&#39;title&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">each</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;a&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">val</span><span class="p">())</span>
+<span class="go">[u&#39;The Shawshank Redemption&#39;,...]</span>
+</pre></div>
+</div>
+<p>Think of <code class="docutils literal"><span class="pre">Q[stuff]</span></code> as shorthand for <code class="docutils literal"><span class="pre">lambda</span> <span class="pre">x:</span> <span class="pre">x[stuff]</span></code>.</p>
+<p>The <a class="reference internal" href="api.html#soupy.Collection.dump" title="soupy.Collection.dump"><code class="xref py py-meth docutils literal"><span class="pre">dump()</span></code></a> method works similarly to <a class="reference internal" href="api.html#soupy.Collection.each" title="soupy.Collection.each"><code class="xref py py-meth docutils literal"><span class="pre">each()</span></code></a>,
+except that it extracts multiple values from each node, and packs
+them into a list of dictionaries. It&#8217;s a convenient way to extract a JSON blob out of a document.</p>
+<p>For example,</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">print</span><span class="p">(</span><span class="n">soup</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s">&#39;td&#39;</span><span class="p">,</span> <span class="s">&#39;title&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span>
+      <span class="n">name</span><span class="o">=</span><span class="n">Q</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;a&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="p">,</span>
+      <span class="n">year</span><span class="o">=</span><span class="n">Q</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;span&#39;</span><span class="p">,</span> <span class="s">&#39;year_type&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="p">)</span><span class="o">.</span><span class="n">val</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>[{&#39;name&#39;: u&#39;The Shawshank Redemption&#39;, &#39;year&#39;: u&#39;1994&#39;}, ...]
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">You can also run dump on a single node to extract a single dictionary.</p>
+</div>
+</div>
+<div class="section" id="transforming-values-with-map-and-apply">
+<h3>Transforming values with map and apply<a class="headerlink" href="#transforming-values-with-map-and-apply" title="Permalink to this headline">¶</a></h3>
+<p>Notice above that we extracted each &#8220;year&#8221; value as a string.
+We&#8217;d like to use integers instead. The <a class="reference internal" href="api.html#soupy.Collection.map" title="soupy.Collection.map"><code class="xref py py-meth docutils literal"><span class="pre">map()</span></code></a>
+and <a class="reference internal" href="api.html#soupy.Collection.apply" title="soupy.Collection.apply"><code class="xref py py-meth docutils literal"><span class="pre">apply()</span></code></a> methods
+let us transform the data inside a Soupy wrapper, and build a new
+wrapper out of the transformed value.</p>
+<p><a class="reference internal" href="api.html#soupy.Collection.map" title="soupy.Collection.map"><code class="xref py py-meth docutils literal"><span class="pre">map()</span></code></a> takes a function as input, applies that function to the
+wrapped data, and returns a new wrapper. So we can extract integer years
+via</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">soup</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;td&#39;</span><span class="p">,</span> <span class="s">&#39;title&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;span&#39;</span><span class="p">,</span> <span class="s">&#39;year_type&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+<span class="go">Scalar(1994)</span>
+</pre></div>
+</div>
+<p><a class="reference internal" href="api.html#soupy.Collection.map" title="soupy.Collection.map"><code class="xref py py-meth docutils literal"><span class="pre">map()</span></code></a> can be applied to any wrapper:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Scalar.map applies the transformation to the data in the scalar</li>
+<li>Node.map applies the transformation to the BeautifulSoup element</li>
+<li>Collection.map applies the transformation to the list of nodes (rarely used)</li>
+</ul>
+</div></blockquote>
+<p>The <a class="reference internal" href="api.html#soupy.Collection.apply" title="soupy.Collection.apply"><code class="xref py py-meth docutils literal"><span class="pre">apply()</span></code></a> function is similar to <a class="reference internal" href="api.html#soupy.Collection.map" title="soupy.Collection.map"><code class="xref py py-meth docutils literal"><span class="pre">map()</span></code></a>, except that the input function is called on the wrapper itself, and not the data inside the wrapper (the output will be re-wrapped automatically).</p>
+<p>Note also that Q-expressions are not restricted to working with Soupy
+nodes &#8211; they can be used to express any chain of methods on an object:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">soup</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;td&#39;</span><span class="p">,</span> <span class="s">&#39;title&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;a&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">upper</span><span class="p">())</span>
+<span class="go">Scalar(u&#39;THE SHAWSHANK REDEMPTION&#39;)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="filtering-collections-with-filter-takewhile-dropwhile">
+<h3>Filtering Collections with filter, takewhile, dropwhile<a class="headerlink" href="#filtering-collections-with-filter-takewhile-dropwhile" title="Permalink to this headline">¶</a></h3>
+<p>The <a class="reference internal" href="api.html#soupy.Collection.filter" title="soupy.Collection.filter"><code class="xref py py-meth docutils literal"><span class="pre">filter()</span></code></a>, <a class="reference internal" href="api.html#soupy.Collection.takewhile" title="soupy.Collection.takewhile"><code class="xref py py-meth docutils literal"><span class="pre">takewhile()</span></code></a>, and
+<a class="reference internal" href="api.html#soupy.Collection.dropwhile" title="soupy.Collection.dropwhile"><code class="xref py py-meth docutils literal"><span class="pre">dropwhile()</span></code></a> methods remove unwanted nodes
+from collections. They accept a function which is applied to each
+element in the collection, and converted to a boolean value.
+<a class="reference internal" href="api.html#soupy.Collection.filter" title="soupy.Collection.filter"><code class="xref py py-meth docutils literal"><span class="pre">filter()</span></code></a> removes items where <code class="docutils literal"><span class="pre">func(item)</span></code>
+is False. <a class="reference internal" href="api.html#soupy.Collection.takewhile" title="soupy.Collection.takewhile"><code class="xref py py-meth docutils literal"><span class="pre">takewhile()</span></code></a> removes items
+on and after the first False, and <a class="reference internal" href="api.html#soupy.Collection.dropwhile" title="soupy.Collection.dropwhile"><code class="xref py py-meth docutils literal"><span class="pre">dropwhile()</span></code></a> drops items
+until the first True return value.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">soup</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s">&#39;td&#39;</span><span class="p">,</span> <span class="s">&#39;title&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">each</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;a&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;B&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">val</span><span class="p">()</span>
+<span class="go">[u&#39;Batman Begins&#39;, u&#39;Braveheart&#39;, u&#39;Back to the Future&#39;]</span>
+</pre></div>
+</div>
+<p>This query selects only movies whose titles begin with &#8220;The&#8221;.</p>
+<p>You can also filter lists using slice syntax <code class="docutils literal"><span class="pre">nodes[::3]</span></code>.</p>
+<p>Combining most of these ideas, here&#8217;s a succinct JSON-summary of the
+IMDB movie list:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">cast_split</span> <span class="o">=</span> <span class="n">Q</span><span class="o">.</span><span class="n">text</span> <span class="o">!=</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">    With: &#39;</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">soup</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s">&#39;td&#39;</span><span class="p">,</span> <span class="s">&#39;title&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span>
+      <span class="n">name</span><span class="o">=</span><span class="n">Q</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;a&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="p">,</span>
+      <span class="n">year</span><span class="o">=</span><span class="n">Q</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;span&#39;</span><span class="p">,</span> <span class="s">&#39;year_type&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="p">,</span>
+      <span class="n">genres</span><span class="o">=</span><span class="n">Q</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;span&#39;</span><span class="p">,</span> <span class="s">&#39;genre&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s">&#39;a&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">each</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">text</span><span class="p">),</span>
+      <span class="n">cast</span><span class="o">=</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;span&#39;</span><span class="p">,</span> <span class="s">&#39;credit&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">contents</span><span class="o">.</span><span class="n">dropwhile</span><span class="p">(</span><span class="n">cast_split</span><span class="p">)[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">each</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">text</span><span class="p">)),</span>
+      <span class="n">directors</span><span class="o">=</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;span&#39;</span><span class="p">,</span> <span class="s">&#39;credit&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">contents</span><span class="o">.</span><span class="n">takewhile</span><span class="p">(</span><span class="n">cast_split</span><span class="p">)[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">each</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">text</span><span class="p">)),</span>
+      <span class="n">rating</span><span class="o">=</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="s">&#39;div.user_rating span.rating-rating span.value&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="nb">float</span><span class="p">)),</span>
+<span class="p">)</span><span class="o">.</span><span class="n">val</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>[{&#39;rating&#39;: 9.3, &#39;genres&#39;: [u&#39;Crime&#39;, u&#39;Drama&#39;], &#39;name&#39;: u&#39;The Shawshank Redemption&#39;, &#39;cast&#39;: [u&#39;Tim Robbins&#39;, u&#39;Morgan Freeman&#39;, u&#39;Bob Gunton&#39;]...
+</pre></div>
+</div>
+<p>Contents:</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Soupy API Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#main-wrapper-classes">Main Wrapper Classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#null-wrappers">Null Wrappers</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><span>Index</span></a></li>
+<li><a class="reference internal" href="py-modindex.html"><span>Module Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span>Search Page</span></a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3>About</h3>
+<p>
+    Soupy makes wrangling web documents better.
+</p>
+<h3>Useful Links</h3>
+<ul>
+    <li><a href="https://github.com/ChrisBeaumont/soupy">GitHub page</a></li>
+    <li><a href="https://pypi.python.org/pypi?name=soupy&version=0.1&:action=display"> PyPI entry </a></li>
+    <li><a href="https://github.com/chrisbeaumont/soupy/issues"> Issue Tracker </a></li>
+</ul>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  <div class="footer">
+    &copy; Copyright 2015 Chris Beaumont.
+    Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+  </div>
+  
+  </div>
+  
+  </body>
+</html>

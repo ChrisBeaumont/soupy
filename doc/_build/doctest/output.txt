@@ -1,0 +1,26 @@
+Results of doctest builder run on 2015-04-04 00:30:55
+=====================================================
+
+Document: index
+---------------
+2 items passed all tests:
+   8 tests in default
+   8 tests in imdb
+16 tests in 2 items.
+16 passed and 0 failed.
+Test passed.
+
+Document: api
+-------------
+1 items passed all tests:
+  15 tests in default
+15 tests in 1 items.
+15 passed and 0 failed.
+Test passed.
+
+Doctest summary
+===============
+   31 tests
+    0 failures in tests
+    0 failures in setup code
+    0 failures in cleanup code

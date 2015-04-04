@@ -183,6 +183,17 @@ class TestScalar(object):
     def test_getkey(self):
         assert Scalar({'a': 1})['a'].val() == 1
 
+    def test_arithmetic(self):
+
+        c = Scalar(1)
+        assert (c + 1).val() == 2
+        assert (c - 1).val() == 0
+        assert (c * 2).val() == 2
+        assert (c / 1).val() == 1
+        assert (c // 1).val() == 1
+        assert (c ** 2).val() == 1
+        assert (c % 2).val() == 1
+
 
 class TestNullNode(object):
 
