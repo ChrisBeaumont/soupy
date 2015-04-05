@@ -9,6 +9,11 @@ import six
 from six.moves import map as imap
 
 
+__all__ = ['Soupy', 'Q', 'Node', 'Scalar', 'Collection',
+           'Null', 'NullNode', 'NullCollection',
+           'either', 'NullValueError']
+
+
 @six.add_metaclass(ABCMeta)
 class Wrapper(object):
 
@@ -93,6 +98,7 @@ class Wrapper(object):
 
 
 class NullValueError(ValueError):
+
     """
     The NullValueError exception is raised when attempting
     to extract values from Null objects
@@ -102,6 +108,7 @@ class NullValueError(ValueError):
 
 @six.python_2_unicode_compatible
 class Null(Wrapper):
+
     """
     This is the base class for null wrappers. Null values are returned
     when the result of a function is ill-defined.
@@ -223,6 +230,7 @@ class Some(Wrapper):
 
 
 class Scalar(Some):
+
     """
     A wrapper around single values.
 
@@ -250,6 +258,7 @@ class Scalar(Some):
         Scalar(7)
 
     """
+
     def __getattr__(self, attr):
         return self.map(operator.attrgetter(attr))
 
@@ -308,11 +317,13 @@ class Scalar(Some):
 
 
 class Collection(Some):
+
     """
     Collection's store lists of other wrappers.
 
     They support most of the list methods (len, iter, getitem, etc).
     """
+
     def __init__(self, items):
         super(Collection, self).__init__(list(items))
         self._items = self._value
@@ -438,11 +449,13 @@ class Collection(Some):
 
 
 class NullCollection(Null, Collection):
+
     """
     Represents in invalid Collection.
 
     Returned by some methods on other Null objects.
     """
+
     def __init__(self):
         pass
 
@@ -546,6 +559,7 @@ class NodeLike(object):
 
 
 class Node(NodeLike, Some):
+
     """
     The Node class is the main wrapper around
     BeautifulSoup elements like Tag. It implements many of the
@@ -757,6 +771,7 @@ class Node(NodeLike, Some):
 
 
 class NavigableStringNode(Node):
+
     """
     The NavigableStringNode is a special case Node that wraps
     BeautifulSoup NavigableStrings. This class implements sensible
@@ -826,10 +841,12 @@ class NavigableStringNode(Node):
 
 
 class NullNode(NodeLike, Null):
+
     """
     NullNode is returned when a query doesn't match any node
     in the document.
     """
+
     def _get_null(self):
         """
         Returns the NullNode

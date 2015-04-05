@@ -1,0 +1,3 @@
+include soupy.py
+include LICENSE
+include README.md
