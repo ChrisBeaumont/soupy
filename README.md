@@ -57,6 +57,6 @@ pip install soupy
 
 ## Dependencies
 
-BeautifulSoup4.
+six and BeautifulSoup4
 
 Soupy is supported on Python 2.6+ and 3.3+

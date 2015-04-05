@@ -1,6 +1,5 @@
 /*
- * click.css_t
- * ~~~~~~~~~~~
+ * soupy.css_t -- adapted from click.css_t
  *
  * :copyright: Copyright 2014 by Armin Ronacher.
  * :license: Flask Design License, see LICENSE for details.
@@ -368,9 +367,13 @@ pre {
 }
 
 tt {
-    background-color: #ecf0f3;
-    color: #222;
-    /* padding: 1px 2px; */
+    font-family: monospace;
+    font-size: 13pt;
+}
+
+tt.xref {
+    color: #C52626;
+    font-weight: normal;
 }
 
 tt.xref, a tt {
@@ -385,7 +388,6 @@ code.xref {
 
 a.reference {
     text-decoration: none;
-    border-bottom: 1px dotted #C52626;
 }
 
 a.reference:hover {
@@ -396,7 +398,6 @@ a.footnote-reference {
     text-decoration: none;
     font-size: 0.7em;
     vertical-align: top;
-    border-bottom: 1px dotted #C52626;
 }
 
 a.footnote-reference:hover {
