@@ -5,7 +5,7 @@ to build complex queries when wrangling web data.
 
 Here's an example of a Soupy query.
 
-```
+```python
     from soupy import Soupy, Q
 
     html = """
@@ -25,7 +25,7 @@ Here's an example of a Soupy query.
 
 The same query using BeautifulSoup:
 
-```
+```python
 
   from bs4 import BeautifulSoup, NavigableString
 
