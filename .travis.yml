@@ -1,0 +1,18 @@
+language: python
+
+os:
+    - linux
+
+python:
+    - "2.6"
+    - "2.7"
+    - "3.3"
+    - "3.4"
+
+install: "pip install -r requirements_travis.txt"
+
+script: "py.test --cov soupy"
+
+after_success:
+
+    - coveralls
