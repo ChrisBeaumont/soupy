@@ -284,7 +284,7 @@ class TestNullNode(object):
             NullNode().nonnull().orelse(3).val()
 
     def test_dump(self):
-        assert isinstance(NullNode().dump(x=Q+3), Null)
+        assert isinstance(NullNode().dump(x=Q + 3), Null)
 
 
 class TestCollection(object):
@@ -378,6 +378,11 @@ class TestCollection(object):
 
         items = list(map(Scalar, [1, 2]))
         assert list(Collection(items)) == items
+
+    def test_typecheck(self):
+        """ Collections must contain wrappers """
+        with pytest.raises(TypeError):
+            Collection([1])
 
 
 class TestNullCollection(object):
