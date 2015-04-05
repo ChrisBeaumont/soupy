@@ -9,7 +9,7 @@ python:
     - "3.3"
     - "3.4"
 
-install: "pip install -r requirements_travis.txt"
+install: "pip install -r requirements-travis.txt"
 
 script: "py.test --cov soupy"
 
