@@ -374,6 +374,17 @@ class TestCollection(object):
 
         assert c3.val() == [(1, 2), (2, 4), (3, 6)]
 
+    def test_dictzip(self):
+
+        c = Collection([Scalar(1), Scalar(2)])
+        result = c.dictzip(['a', 'b'])
+        expected = {'a': 1, 'b': 2}
+
+        assert result.val() == expected
+
+        lbls = Collection([Scalar('a'), Scalar('b')])
+        assert c.dictzip(lbls).val() == expected
+
     def test_list(self):
 
         items = list(map(Scalar, [1, 2]))

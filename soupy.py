@@ -476,6 +476,23 @@ class Collection(Some):
         args = [_unwrap(item) for item in (self,) + others]
         return Collection(map(Wrapper.wrap, zip(*args)))
 
+    def dictzip(self, keys):
+        """
+        Turn this collection into a Scalar(dict), by zipping keys and items.
+
+        Parameters:
+
+            keys: list or Collection of NavigableStrings
+                The keys of the dictionary
+
+        Examples:
+
+            >>> c = Collection([Scalar(1), Scalar(2)])
+            >>> c.dictzip(['a', 'b']).val() == {'a': 1, 'b': 2}
+            True
+        """
+        return Scalar(dict(zip(_unwrap(keys), self.val())))
+
     def __iter__(self):
         for item in self._items:
             yield item
