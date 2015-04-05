@@ -209,16 +209,15 @@ class Some(Wrapper):
         return self._value
 
     def __str__(self):
-        value = self._value
+        value = repr(self._value)
 
-        if isinstance(self._value, six.binary_type):
+        if isinstance(value, six.binary_type):
             try:
                 value = value.decode('utf-8')
             except UnicodeDecodeError:
                 value = repr(value)
 
-        return "%s(%s)" % (type(self).__name__,
-                           repr(value))
+        return "%s(%s)" % (type(self).__name__, value)
 
     def __repr__(self):
         return repr(self.__str__())[1:-1]  # trim off quotes
@@ -677,7 +676,7 @@ class Node(NodeLike, Some):
             >>> node
             Node(<p>hi there</p>)
             >>> node.name
-            Scalar(u'p')
+            Scalar('p')
         """
         return self._wrap_scalar(operator.attrgetter('name'))
 
