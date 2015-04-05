@@ -1,7 +1,10 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import print_function, division, unicode_literals
 
 import pytest
 from bs4 import BeautifulSoup
+from six import text_type
 
 from soupy import (Soupy, Node, NullValueError, NullNode,
                    Collection, NullCollection, Null, Q,
@@ -127,6 +130,13 @@ class TestNode(object):
         s = Soupy('')
         assert s.nonnull() == s
 
+    def test_repr_unicode(self):
+
+        s = Soupy('<html>∂ƒ</html>')
+        print(s)
+        print(repr(s))
+        print(text_type(s))
+
 
 class TestNavigableString(object):
     """
@@ -194,6 +204,26 @@ class TestScalar(object):
         assert (c ** 2).val() == 1
         assert (c % 2).val() == 1
 
+        assert (c + c).val() == 2
+
+    def test_repr_unicode(self):
+
+        s = Scalar('∂ƒ')
+        print(s)
+        print(repr(s))
+        print(text_type(s))
+        assert repr(s)[0] != "'"
+
+
+        s = Scalar('∂ƒ'.encode('utf-8'))
+        print(s)
+        print(repr(s))
+        print(text_type(s))
+
+        s = Scalar(b'\xc2')
+        print(s)
+        print(repr(s))
+        print(text_type(s))
 
 class TestNullNode(object):
 
@@ -314,6 +344,12 @@ class TestCollection(object):
         assert Collection([1]).count().val() == 1
         assert NullCollection().count().val() == 0
 
+    def test_repr_unicode(self):
+
+        s = Collection([Soupy('<html>∂ƒ</html>')])
+        print(s)
+        print(repr(s))
+        print(text_type(s))
 
 class TestNullCollection(object):
 

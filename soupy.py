@@ -5,11 +5,11 @@ from itertools import takewhile, dropwhile
 import operator
 
 from bs4 import BeautifulSoup, PageElement, NavigableString
-from six import add_metaclass
+import six
 from six.moves import map as imap
 
 
-@add_metaclass(ABCMeta)
+@six.add_metaclass(ABCMeta)
 class Wrapper(object):
 
     @abstractmethod
@@ -83,9 +83,9 @@ class Wrapper(object):
         Example:
 
             >>> soup = Soupy("<b>hi</b>").find('b')
-            >>> soup.dump(name=Q.name, text=Q.text).val()
-            {'text': u'hi', 'name': 'b'}
-
+            >>> data = soup.dump(name=Q.name, text=Q.text).val()
+            >>> data == {'text': 'hi', 'name': 'b'}
+            True
         """
         result = dict((name, _unwrap(self.apply(func)))
                       for name, func in kwargs.items())
@@ -100,10 +100,11 @@ class NullValueError(ValueError):
     pass
 
 
+@six.python_2_unicode_compatible
 class Null(Wrapper):
     """
     This is the base class for null wrappers. Null values are returned
-    when the result of a function is undefined.
+    when the result of a function is ill-defined.
     """
 
     def val(self):
@@ -147,6 +148,7 @@ class Null(Wrapper):
     __repr__ = __str__
 
 
+@six.python_2_unicode_compatible
 class Some(Wrapper):
 
     def __init__(self, value):
@@ -207,9 +209,19 @@ class Some(Wrapper):
         return self._value
 
     def __str__(self):
-        return "%s(%r)" % (type(self).__name__, self._value)
+        value = self._value
 
-    __repr__ = __str__
+        if isinstance(self._value, six.binary_type):
+            try:
+                value = value.decode('utf-8')
+            except UnicodeDecodeError:
+                value = repr(value)
+
+        return "%s(%s)" % (type(self).__name__,
+                           repr(value))
+
+    def __repr__(self):
+        return repr(self.__str__())[1:-1]  # trim off quotes
 
 
 class Scalar(Some):
@@ -223,7 +235,22 @@ class Scalar(Some):
     Calling a Scalar calls the wrapped value, and wraps
     the result.
 
-    bool(Scalar) computes bool(Scalar.val()) and returns the result
+    Examples:
+
+        >>> s = Scalar(3)
+        >>> s > 2
+        Scalar(True)
+        >>> s.val()
+        3
+        >>> s + 5
+        Scalar(8)
+        >>> s + s
+        Scalar(6)
+        >>> bool(Scalar(3))
+        True
+        >>> Scalar(lambda x: x+2)(5)
+        Scalar(7)
+
     """
     def __getattr__(self, attr):
         return self.map(operator.attrgetter(attr))
@@ -258,28 +285,31 @@ class Scalar(Some):
         return len(self._value)
 
     def __add__(self, other):
-        return self.map(Q + other)
+        return self.map(Q + _unwrap(other))
 
     def __sub__(self, other):
-        return self.map(Q - other)
+        return self.map(Q - _unwrap(other))
 
     def __mul__(self, other):
-        return self.map(Q * other)
+        return self.map(Q * _unwrap(other))
 
     def __div__(self, other):
-        return self.map(Q / other)
-
-    def __floordiv__(self, other):
-        return self.map(Q // other)
-
-    def __pow__(self, other):
-        return self.map(Q ** other)
-
-    def __mod__(self, other):
-        return self.map(Q % other)
+        return self.map(Q / _unwrap(other))
 
     def __truediv__(self, other):
-        return self.map(Q / other)
+        return self.map(Q / _unwrap(other))
+
+    def __floordiv__(self, other):
+        return self.map(Q // _unwrap(other))
+
+    def __pow__(self, other):
+        return self.map(Q ** _unwrap(other))
+
+    def __mod__(self, other):
+        return self.map(Q % _unwrap(other))
+
+    def __truediv__(self, other):
+        return self.map(Q / _unwrap(other))
 
 
 class Collection(Some):
@@ -453,7 +483,7 @@ class NullCollection(Null, Collection):
         return Scalar(0)
 
 
-@add_metaclass(ABCMeta)
+@six.add_metaclass(ABCMeta)
 class NodeLike(object):
 
     # should return NodeLike
@@ -647,7 +677,7 @@ class Node(NodeLike, Some):
             >>> node
             Node(<p>hi there</p>)
             >>> node.name
-            Scalar('p')
+            Scalar(u'p')
         """
         return self._wrap_scalar(operator.attrgetter('name'))
 
@@ -806,9 +836,15 @@ class NullNode(NodeLike, Null):
     in the document.
     """
     def _get_null(self):
+        """
+        Returns the NullNode
+        """
         return NullNode()
 
     def _get_null_set(self):
+        """
+        Returns the NullCollection
+        """
         return NullCollection()
 
     children = property(_get_null_set)
@@ -966,10 +1002,10 @@ class Expression(object):
         return BinaryOp(operator.sub, self, other)
 
     def __div__(self, other):
-        return BinaryOp(operator.div, self, other)
+        return BinaryOp(operator.__div__, self, other)
 
     def __floordiv__(self, other):
-        return BinaryOp(operator.div, self, other)
+        return BinaryOp(operator.floordiv, self, other)
 
     def __truediv__(self, other):
         return BinaryOp(operator.truediv, self, other)
