@@ -129,8 +129,8 @@ consider what happens when a search doesn't match anything:
 
 BeautifulSoup returns ``None`` when a match fails, which makes it
 impossible to chain expressions together. Soupy returns
-a ``NullNode``, which can be further chained without
-raising exceptions. Of course, since ``NullNode`` represents
+a :class:`NullNode`, which can be further chained without
+raising exceptions. However, since :class:`NullNode` represents
 a failed match, trying to extract any data raises an error:
 
 .. doctest::
@@ -156,13 +156,14 @@ value when a query doesn't match:
 There are lots of little corner cases like this in BeautifulSoup --
 sometimes functions return strings instead of Tags, sometimes they
 return None, sometimes certain methods or attributes aren't
-defined.
+defined, etc.
 
 Soupy's API is more predictable, and better suited for searching through
 messily-formated documents. Here are the main properties and methods
 copied over from BeautifulSoup. All of these features perform the same
 conceptual task as in BeautifulSoup, but they *always* return the same
-wrapper class.
+wrapper class. The primary goal of Soupy's design is to allow you to string together complex queries, without worrying about query failures
+at each step of the search.
 
 - Properties and Methods that return :class:`Node` (or :class:`NullNode`)
 
@@ -233,7 +234,8 @@ Soupy provides an alternative syntax via the :meth:`~Collection.each` method:
 
 .. doctest:: imdb
 
-    >>> print(soup.find_all('td', 'title').each(lambda node: node.find('a').text).val())
+    >>> print(soup.find_all('td', 'title').each(
+    ...       lambda node: node.find('a').text).val())
     [u'The Shawshank Redemption',...]
 
 :meth:`Collection.each` applies a function to every node in a collection, and
@@ -277,6 +279,14 @@ Transforming values with map and apply
 ......................................
 
 Notice above that we extracted each "year" value as a string.
+
+.. doctest:: imdb
+
+    >>> y = soup.find('td', 'title').find('span', 'year_type').text[1:-1]
+    >>> y
+    Scalar(u'1994')
+
+
 We'd like to use integers instead. The :meth:`~Collection.map`
 and :meth:`~Collection.apply` methods
 let us transform the data inside a Soupy wrapper, and build a new
@@ -288,7 +298,7 @@ via
 
 .. doctest:: imdb
 
-    >>> soup.find('td', 'title').find('span', 'year_type').text[1:-1].map(int)
+    >>> y.map(int)
     Scalar(1994)
 
 
@@ -298,10 +308,11 @@ via
  - Node.map applies the transformation to the BeautifulSoup element
  - Collection.map applies the transformation to the list of nodes (rarely used)
 
-The :meth:`~Collection.apply` function is similar to :meth:`~Collection.map`, except that the input function is called on the wrapper itself, and not the data inside the wrapper (the output will be re-wrapped automatically).
+The :meth:`~Collection.apply` function is similar to :meth:`~Collection.map`, except that the input function is called on the wrapper itself, and not the data inside the wrapper (the output will be re-wrapped automatically if needed).
 
 Note also that Q-expressions are not restricted to working with Soupy
-nodes -- they can be used to express any chain of methods on an object:
+nodes -- they can be used on any object. For example, to uppercase
+all movie titles:
 
 .. doctest:: imdb
 
@@ -315,9 +326,9 @@ The :meth:`~Collection.filter`, :meth:`~Collection.takewhile`, and
 :meth:`~Collection.dropwhile` methods remove unwanted nodes
 from collections. They accept a function which is applied to each
 element in the collection, and converted to a boolean value.
-:meth:`~Collection.filter` removes items where ``func(item)``
-is False. :meth:`~Collection.takewhile` removes items
-on and after the first False, and :meth:`~Collection.dropwhile` drops items
+``filter(func)`` removes items where ``func(item)``
+is False. ``takewhile(func)`` removes items
+on and after the first False, and ``dropwhile(func)`` drops items
 until the first True return value.
 
 .. doctest:: imdb
@@ -325,7 +336,7 @@ until the first True return value.
   >>> soup.find_all('td', 'title').each(Q.find('a').text).filter(Q.startswith('B')).val()
   [u'Batman Begins', u'Braveheart', u'Back to the Future']
 
-This query selects only movies whose titles begin with "The".
+This query selects only movies whose titles begin with "B".
 
 You can also filter lists using slice syntax ``nodes[::3]``.
 
@@ -346,8 +357,12 @@ IMDB movie list:
     ).val())
 
 .. testoutput:: imdb
+  :options: +NORMALIZE_WHITESPACE
 
-  [{'rating': 9.3, 'genres': [u'Crime', u'Drama'], 'name': u'The Shawshank Redemption', 'cast': [u'Tim Robbins', u'Morgan Freeman', u'Bob Gunton']...
+  [{'rating': 9.3,
+    'genres': [u'Crime', u'Drama'],
+    'name': u'The Shawshank Redemption',
+    'cast': [u'Tim Robbins', u'Morgan Freeman', u'Bob Gunton']...
 
 Contents:
 

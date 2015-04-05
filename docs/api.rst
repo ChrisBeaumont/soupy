@@ -10,6 +10,7 @@ Main Wrapper Classes
 .. autoclass:: Node
    :members:
 
+   .. automethod:: dump
    .. automethod:: val
    .. automethod:: orelse
 
