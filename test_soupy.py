@@ -350,13 +350,13 @@ class TestCollection(object):
 
     def test_bool(self):
 
-        assert Collection([1])
+        assert Collection([Scalar(1)])
         assert not Collection([])
 
     def test_count(self):
 
         assert Collection([]).count().val() == 0
-        assert Collection([1]).count().val() == 1
+        assert Collection([Scalar(1)]).count().val() == 1
         assert NullCollection().count().val() == 0
 
     def test_repr_unicode(self):
@@ -365,6 +365,19 @@ class TestCollection(object):
         print(s)
         print(repr(s))
         print(text_type(s))
+
+    def test_zip(self):
+
+        c1 = Collection(map(Scalar, [1, 2, 3]))
+        c2 = c1.each(Q * 2)
+        c3 = c1.zip(c2)
+
+        assert c3.val() == [(1, 2), (2, 4), (3, 6)]
+
+    def test_list(self):
+
+        items = list(map(Scalar, [1, 2]))
+        assert list(Collection(items)) == items
 
 
 class TestNullCollection(object):

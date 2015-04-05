@@ -327,6 +327,12 @@ class Collection(Some):
     def __init__(self, items):
         super(Collection, self).__init__(list(items))
         self._items = self._value
+        self._assert_items_are_wrappers()
+
+    def _assert_items_are_wrappers(self):
+        for item in self:
+            if not isinstance(item, Wrapper):
+                raise TypeError("Collection can only hold other wrappers")
 
     def val(self):
         """
@@ -446,6 +452,33 @@ class Collection(Some):
         Return the number of items in the collection, as a :class:`Scalar`
         """
         return Scalar(len(self))
+
+    def zip(self, *others):
+        """
+        Zip the items of this collection with one or more
+        other sequences, and wrap the result.
+
+        Parameters:
+
+            others: One or more iterables or Collections
+
+        Returns:
+
+            A new collection.
+
+        Examples:
+
+            >>> c1 = Collection([Scalar(1), Scalar(2)])
+            >>> c2 = Collection([Scalar(3), Scalar(4)])
+            >>> c1.zip(c2).val()
+            [(1, 3), (2, 4)]
+        """
+        args = [_unwrap(item) for item in (self,) + others]
+        return Collection(map(Wrapper.wrap, zip(*args)))
+
+    def __iter__(self):
+        for item in self._items:
+            yield item
 
 
 class NullCollection(Null, Collection):
