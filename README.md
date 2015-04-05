@@ -6,59 +6,56 @@ to build complex queries when wrangling web data.
 Here's an example of a Soupy query.
 
 ```python
-    from soupy import Soupy, Q
+from soupy import Soupy, Q
 
-    html = """
-    <div id="main">
-      <div>The web is messy</div>
-      and full of traps
-      <div>but Soupy loves you</div>
-    </div>"""
+html = """
+<div id="main">
+  <div>The web is messy</div>
+  and full of traps
+  <div>but Soupy loves you</div>
+</div>"""
 
-    print(Soupy(html).find(id='main').children
-          .each(Q.text.strip()) # extract text from each node, trim whitespace
-          .filter(len)          # remove empty strings
-          .val())               # dump out of Soupy
+print(Soupy(html).find(id='main').children
+      .each(Q.text.strip()) # extract text from each node, trim whitespace
+      .filter(len)          # remove empty strings
+      .val())               # dump out of Soupy
 
-  # [u'The web is messy', u'and full of traps', u'but Soupy loves you']
+# ['The web is messy', 'and full of traps', 'but Soupy loves you']
 ```
 
 The same query using BeautifulSoup:
 
 ```python
+ from bs4 import BeautifulSoup, NavigableString
 
-  from bs4 import BeautifulSoup, NavigableString
+html = """
+<div id="main">
+  <div>The web is messy</div>
+  and full of traps
+  <div>but Soupy loves you</div>
+</div>"""
 
-    html = """
-    <div id="main">
-      <div>The web is messy</div>
-      and full of traps
-      <div>but Soupy loves you</div>
-    </div>"""
+result = []
+for node in BeautifulSoup(html).find(id='main').children:
+    if isinstance(node, NavigableString):
+        text = node.strip()
+    else:
+        text = node.text.strip()
+    if len(text):
+        result.append(text)
 
-    result = []
-    for node in BeautifulSoup(html).find(id='main').children:
-        if isinstance(node, NavigableString):
-            text = node.strip()
-        else:
-            text = node.text.strip()
-        if len(text):
-            result.append(text)
-
-    print(result)
-
+print(result)
 ```
-
 
 For more information, see the [Soupy Documentation](http://soupy.readthedocs.org)
 
-# Installation
+## Installation
 
 ```
 pip install soupy
 ```
 
-# Dependencies
+## Dependencies
 
 BeautifulSoup4.
 
