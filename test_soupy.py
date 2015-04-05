@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function, division, unicode_literals
+import operator
 
 import pytest
 from bs4 import BeautifulSoup
-from six import text_type
+from six import PY3, text_type
 
 from soupy import (Soupy, Node, NullValueError, NullNode,
                    Collection, NullCollection, Null, Q,
@@ -187,6 +188,9 @@ class TestScalar(object):
     def test_le(self):
         assert (Scalar(3) <= 3).val()
 
+    def test_len(self):
+        assert len(Scalar([1, 2, 3])) == 3
+
     def test_slice(self):
         assert Scalar('test')[1:-1].val() == 'es'
 
@@ -200,6 +204,11 @@ class TestScalar(object):
         assert (c - 1).val() == 0
         assert (c * 2).val() == 2
         assert (c / 1).val() == 1
+        assert operator.truediv(c, 2).val() == 0.5
+
+        if not PY3:
+            assert operator.div(c, 2).val() == 0.5
+
         assert (c // 1).val() == 1
         assert (c ** 2).val() == 1
         assert (c % 2).val() == 1
@@ -214,7 +223,6 @@ class TestScalar(object):
         print(text_type(s))
         assert repr(s)[0] != "'"
 
-
         s = Scalar('∂ƒ'.encode('utf-8'))
         print(s)
         print(repr(s))
@@ -225,7 +233,11 @@ class TestScalar(object):
         print(repr(s))
         print(text_type(s))
 
+
 class TestNullNode(object):
+
+    def test_str(self):
+        assert str(NullNode()) == "NullNode()"
 
     def test_val_raises(self):
         with pytest.raises(NullValueError):
@@ -270,6 +282,9 @@ class TestNullNode(object):
     def test_nonnull_overrides_orelse(self):
         with pytest.raises(NullValueError):
             NullNode().nonnull().orelse(3).val()
+
+    def test_dump(self):
+        assert isinstance(NullNode().dump(x=Q+3), Null)
 
 
 class TestCollection(object):
@@ -350,6 +365,7 @@ class TestCollection(object):
         print(s)
         print(repr(s))
         print(text_type(s))
+
 
 class TestNullCollection(object):
 
@@ -492,10 +508,17 @@ class TestExpression(object):
         assert (Q + 5).__eval__(2) == 7
         assert (Q - 1).__eval__(1) == 0
         assert (Q * 2).__eval__(4) == 8
+
+        if not PY3:
+            assert operator.div(Q, 2).__eval__(3) == 1
+
+        assert operator.truediv(Q, 2).__eval__(3) == 1.5
+
         assert (Q / 2).__eval__(4) == 2.0
         assert (Q // 2).__eval__(4) == 2
         assert (Q % 2).__eval__(3) == 1
         assert (Q ** 2).__eval__(3) == 9
+
 
 def _public_api(cls):
     return set(item

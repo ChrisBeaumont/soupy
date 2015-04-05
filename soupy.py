@@ -209,13 +209,12 @@ class Some(Wrapper):
         return self._value
 
     def __str__(self):
+        # returns unicode
+        # six builds appropriate py2/3 methods from this
         value = repr(self._value)
 
         if isinstance(value, six.binary_type):
-            try:
-                value = value.decode('utf-8')
-            except UnicodeDecodeError:
-                value = repr(value)
+            value = value.decode('utf-8')
 
         return "%s(%s)" % (type(self).__name__, value)
 
@@ -293,9 +292,6 @@ class Scalar(Some):
         return self.map(Q * _unwrap(other))
 
     def __div__(self, other):
-        return self.map(Q / _unwrap(other))
-
-    def __truediv__(self, other):
         return self.map(Q / _unwrap(other))
 
     def __floordiv__(self, other):
