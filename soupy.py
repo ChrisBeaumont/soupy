@@ -480,6 +480,24 @@ class Collection(Some):
         for item in self._items:
             yield item
 
+    def all(self):
+        """
+        Scalar(True) if all items are truthy, or collection is empty.
+        """
+        return self.map(all)
+
+    def any(self):
+        """
+        Scalar(True) if whether any items are truthy.
+        """
+        return self.map(any)
+
+    def none(self):
+        """
+        Scalar(True) if no items are truthy, or collection is empty.
+        """
+        return self.map(lambda items: not any(items))
+
 
 class NullCollection(Null, Collection):
 

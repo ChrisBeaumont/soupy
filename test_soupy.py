@@ -384,6 +384,28 @@ class TestCollection(object):
         with pytest.raises(TypeError):
             Collection([1])
 
+    def test_all(self):
+
+        c = Collection(map(Scalar, [True, False]))
+        assert c.any().val()
+        assert not c.all().val()
+        assert not c.none().val()
+
+        c = Collection(map(Scalar, [True, True]))
+        assert c.any().val()
+        assert c.all().val()
+        assert not c.none().val()
+
+        c = Collection(map(Scalar, [False, False]))
+        assert not c.any().val()
+        assert not c.all().val()
+        assert c.none().val()
+
+        c = Collection([])
+        assert not c.any().val()
+        assert c.none().val()
+        assert c.all().val()  # this is python's behavior for empty lists
+
 
 class TestNullCollection(object):
 
