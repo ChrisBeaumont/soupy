@@ -44,6 +44,9 @@ class TestWrapper(object):
 
 class TestNode(object):
 
+    def test_bool(self):
+        assert bool(Node(3))
+
     def test_val(self):
         assert Node(3).val() == 3
 
@@ -138,6 +141,11 @@ class TestNode(object):
         print(repr(s))
         print(text_type(s))
 
+    def test_prettify(self):
+        s = Soupy('<html>∂ƒ</html>')
+
+        assert s.prettify() == s.val().prettify()
+
 
 class TestNavigableString(object):
     """
@@ -167,6 +175,9 @@ class TestNavigableString(object):
     @pytest.mark.parametrize('attr', ('find_all', 'select'))
     def test_multi_find(self, attr):
         assert len(getattr(self.node, attr)('a')) == 0
+
+    def test_prettify(self):
+        assert self.node.prettify() == self.node.val()
 
 
 class TestScalar(object):
@@ -233,6 +244,83 @@ class TestScalar(object):
         print(repr(s))
         print(text_type(s))
 
+    def test_require(self):
+
+        s = Scalar(3)
+        assert s.require(Q > 1) is s
+
+        with pytest.raises(NullValueError):
+            s.require(Q > 4)
+
+    def test_arithmetic_with_null(self):
+        l, r = Scalar(1), Null()
+
+        assert isinstance(l + r, Null)
+        assert isinstance(l - r, Null)
+        assert isinstance(l * r, Null)
+        assert isinstance(l / r, Null)
+        assert isinstance(l // r, Null)
+        assert isinstance(l ** r, Null)
+        assert isinstance(l % r, Null)
+        if not PY3:
+            assert isinstance(operator.div(l, r), Null)
+
+    def test_setitem(self):
+
+        s = Scalar({'a': 1})
+        s['b'] = 2
+        assert s.val() == {'a': 1, 'b': 2}
+
+
+class TestNull(object):
+
+    def test_call(self):
+        assert isinstance(Null()(), Null)
+
+    def test_getattr(self):
+        assert isinstance(Null().b, Null)
+
+    def test_len(self):
+        with pytest.raises(TypeError):
+            len(Null())
+
+    def test_comparison(self):
+
+        c = Null()
+        assert isinstance(c > 0, Null)
+        assert isinstance(c >= 0, Null)
+        assert isinstance(c < 0, Null)
+        assert isinstance(c <= 0, Null)
+        assert isinstance(c == 0, Null)
+        assert isinstance(c != 0, Null)
+
+    def test_arithmetic(self):
+
+        c = Null()
+        assert isinstance((c + 1), Null)
+        assert isinstance((c - 1), Null)
+        assert isinstance((c * 2), Null)
+        assert isinstance((c / 1), Null)
+        assert isinstance(operator.truediv(c, 2), Null)
+
+        if not PY3:
+            assert isinstance(operator.div(c, 2), Null)
+
+        assert isinstance((c // 1), Null)
+        assert isinstance((c ** 2), Null)
+        assert isinstance((c % 2), Null)
+
+        assert isinstance((c + c), Null)
+
+    def test_require(self):
+
+        with pytest.raises(NullValueError):
+            Null().require(lambda x: True)
+
+    def test_setitem(self):
+        node = NullNode()
+        node['a'] = 3
+
 
 class TestNullNode(object):
 
@@ -252,7 +340,7 @@ class TestNullNode(object):
     @pytest.mark.parametrize('attr', SINGLE_PROPS)
     def test_single_props(self, attr):
         node = NullNode()
-        assert isinstance(getattr(node, attr), Null)
+        assert isinstance(getattr(node, attr), NullNode)
 
     @pytest.mark.parametrize('attr', SCALAR_PROPS)
     def test_scalar_props(self, attr):
@@ -284,7 +372,11 @@ class TestNullNode(object):
             NullNode().nonnull().orelse(3).val()
 
     def test_dump(self):
-        assert isinstance(NullNode().dump(x=Q+3), Null)
+        assert isinstance(NullNode().dump(x=Q + 3), Null)
+
+    def test_prettify(self):
+
+        assert NullNode().prettify() == "Null Node"
 
 
 class TestCollection(object):
@@ -374,10 +466,51 @@ class TestCollection(object):
 
         assert c3.val() == [(1, 2), (2, 4), (3, 6)]
 
+        with pytest.raises(ValueError):
+            c1.zip([1, 2])
+
+    def test_dictzip(self):
+
+        c = Collection([Scalar(1), Scalar(2)])
+        result = c.dictzip(['a', 'b'])
+        expected = {'a': 1, 'b': 2}
+
+        assert result.val() == expected
+
+        lbls = Collection([Scalar('a'), Scalar('b')])
+        assert c.dictzip(lbls).val() == expected
+
     def test_list(self):
 
         items = list(map(Scalar, [1, 2]))
         assert list(Collection(items)) == items
+
+    def test_typecheck(self):
+        """ Collections must contain wrappers """
+        with pytest.raises(TypeError):
+            Collection([1])
+
+    def test_all(self):
+
+        c = Collection(map(Scalar, [True, False]))
+        assert c.any().val()
+        assert not c.all().val()
+        assert not c.none().val()
+
+        c = Collection(map(Scalar, [True, True]))
+        assert c.any().val()
+        assert c.all().val()
+        assert not c.none().val()
+
+        c = Collection(map(Scalar, [False, False]))
+        assert not c.any().val()
+        assert not c.all().val()
+        assert c.none().val()
+
+        c = Collection([])
+        assert not c.any().val()
+        assert c.none().val()
+        assert c.all().val()  # this is python's behavior for empty lists
 
 
 class TestNullCollection(object):
@@ -534,11 +667,18 @@ class TestExpression(object):
 
 
 def _public_api(cls):
+    # return names of public and magic methods
     return set(item
                for typ in cls.mro()
                for item in typ.__dict__.keys()
                if not item.startswith('_')
+               or item.startswith('__')
                )
+
+
+def test_scalar_api():
+    """ Scalar and Null have identical interfaces """
+    assert _public_api(Scalar) == _public_api(Null)
 
 
 def test_node_api():
