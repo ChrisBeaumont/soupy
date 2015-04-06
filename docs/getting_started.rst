@@ -141,7 +141,7 @@ Iterating over results with each, dump, dictzip
 
 A common pattern in BeautifulSoup is to iterate over results from a
 call like :meth:`~Node.find_all` using a list comprehension. For example,
-consider the query to extract all the movie Titles on `this IMDB page <http:;//chrisbeaumont.github.io/soupy/imdb_demo.html>`_
+consider the query to extract all the movie Titles on `this IMDB page <http://chrisbeaumont.github.io/soupy/imdb_demo.html>`_
 
 
 .. testcode:: imdb
