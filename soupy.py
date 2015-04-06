@@ -96,6 +96,10 @@ class Wrapper(object):
                       for name, func in kwargs.items())
         return Wrapper.wrap(result)
 
+    @abstractmethod
+    def require(self, func, msg='Requirement Violated'):
+        pass  # pragma: no cover
+
 
 class NullValueError(ValueError):
 
@@ -107,7 +111,7 @@ class NullValueError(ValueError):
 
 
 @six.python_2_unicode_compatible
-class Null(Wrapper):
+class BaseNull(Wrapper):
 
     """
     This is the base class for null wrappers. Null values are returned
@@ -143,6 +147,15 @@ class Null(Wrapper):
         Raises :class:`NullValueError`
         """
         raise NullValueError()
+
+    def require(self, func, msg="Requirement is violated (wrapper is null)"):
+        """
+        Raises :class:`NullValueError`
+        """
+        raise NullValueError()
+
+    def __setitem__(self, key, val):
+        pass
 
     def __bool__(self):
         return False
@@ -215,6 +228,25 @@ class Some(Wrapper):
         """
         return self._value
 
+    def require(self, func, msg="Requirement violated"):
+        """
+        Assert that self.apply(func) is True.
+
+        Parameters:
+
+            func : func(wrapper)
+            msg : str
+               The error message to display on failure
+
+        Returns:
+
+            If self.apply(func) is True, returns self.
+            Otherwise, raises NullValueError.
+        """
+        if self.apply(func):
+            return self
+        raise NullValueError(msg)
+
     def __str__(self):
         # returns unicode
         # six builds appropriate py2/3 methods from this
@@ -227,6 +259,65 @@ class Some(Wrapper):
 
     def __repr__(self):
         return repr(self.__str__())[1:-1]  # trim off quotes
+
+    def __setitem__(self, key, val):
+        return self.map(Q.__setitem__(key, val))
+
+
+class Null(BaseNull):
+    """
+    The class for ill-defined Scalars.
+    """
+    def __getattr__(self, attr):
+        return Null()
+
+    def __call__(self, *args, **kwargs):
+        return Null()
+
+    def __eq__(self, other):
+        return Null()
+
+    def __ne__(self, other):
+        return Null()
+
+    def __gt__(self, other):
+        return Null()
+
+    def __ge__(self, other):
+        return Null()
+
+    def __lt__(self, other):
+        return Null()
+
+    def __le__(self, other):
+        return Null()
+
+    def __len__(self):
+        raise TypeError("Null has no len()")
+
+    def __add__(self, other):
+        return Null()
+
+    def __sub__(self, other):
+        return Null()
+
+    def __mul__(self, other):
+        return Null()
+
+    def __div__(self, other):
+        return Null()
+
+    def __floordiv__(self, other):
+        return Null()
+
+    def __pow__(self, other):
+        return Null()
+
+    def __mod__(self, other):
+        return Null()
+
+    def __truediv__(self, other):
+        return Null()
 
 
 class Scalar(Some):
@@ -266,10 +357,10 @@ class Scalar(Some):
         return self.map(operator.methodcaller('__call__', *args, **kwargs))
 
     def __eq__(self, other):
-        return self.map(operator.methodcaller('__eq__', other))
+        return self.map(lambda x: x == other)
 
     def __ne__(self, other):
-        return self.map(operator.methodcaller('__ne__', other))
+        return self.map(lambda x: x != other)
 
     def __gt__(self, other):
         return self.map(lambda x: x > other)
@@ -292,27 +383,43 @@ class Scalar(Some):
         return len(self._value)
 
     def __add__(self, other):
+        if isinstance(other, BaseNull):
+            return other
         return self.map(Q + _unwrap(other))
 
     def __sub__(self, other):
+        if isinstance(other, BaseNull):
+            return other
         return self.map(Q - _unwrap(other))
 
     def __mul__(self, other):
+        if isinstance(other, BaseNull):
+            return other
         return self.map(Q * _unwrap(other))
 
     def __div__(self, other):
+        if isinstance(other, BaseNull):
+            return other
         return self.map(Q / _unwrap(other))
 
     def __floordiv__(self, other):
+        if isinstance(other, BaseNull):
+            return other
         return self.map(Q // _unwrap(other))
 
     def __pow__(self, other):
+        if isinstance(other, BaseNull):
+            return other
         return self.map(Q ** _unwrap(other))
 
     def __mod__(self, other):
+        if isinstance(other, BaseNull):
+            return other
         return self.map(Q % _unwrap(other))
 
     def __truediv__(self, other):
+        if isinstance(other, BaseNull):
+            return other
         return self.map(Q / _unwrap(other))
 
 
@@ -458,6 +565,8 @@ class Collection(Some):
         Zip the items of this collection with one or more
         other sequences, and wrap the result.
 
+        Unlike Python's zip, all sequences must be the same length.
+
         Parameters:
 
             others: One or more iterables or Collections
@@ -474,6 +583,9 @@ class Collection(Some):
             [(1, 3), (2, 4)]
         """
         args = [_unwrap(item) for item in (self,) + others]
+        ct = self.count()
+        if not all(len(arg) == ct for arg in args):
+            raise ValueError("Arguments are not all the same length")
         return Collection(map(Wrapper.wrap, zip(*args)))
 
     def dictzip(self, keys):
@@ -505,7 +617,7 @@ class Collection(Some):
 
     def any(self):
         """
-        Scalar(True) if whether any items are truthy.
+        Scalar(True) if any items are truthy. False if empty.
         """
         return self.map(any)
 
@@ -515,8 +627,13 @@ class Collection(Some):
         """
         return self.map(lambda items: not any(items))
 
+    def __bool__(self):
+        return bool(self._items)
 
-class NullCollection(Null, Collection):
+    __nonzero__ = __bool__
+
+
+class NullCollection(BaseNull, Collection):
 
     """
     Represents in invalid Collection.
@@ -616,6 +733,10 @@ class NodeLike(object):
 
     @abstractmethod
     def find_parents(self, *args, **kwargs):
+        pass  # pragma: no cover
+
+    @abstractmethod
+    def prettify(self):
         pass  # pragma: no cover
 
     def __iter__(self):
@@ -837,6 +958,14 @@ class Node(NodeLike, Some):
         op = operator.methodcaller('select', selector)
         return self._wrap_multi(op)
 
+    def prettify(self):
+        return self.map(Q.prettify()).val()
+
+    def __bool__(self):
+        return True
+
+    __nonzero__ = __bool__
+
 
 class NavigableStringNode(Node):
 
@@ -907,8 +1036,11 @@ class NavigableStringNode(Node):
         """
         return Collection([])
 
+    def prettify(self):
+        return self.text.val()
 
-class NullNode(NodeLike, Null):
+
+class NullNode(NodeLike, BaseNull):
 
     """
     NullNode is returned when a query doesn't match any node
@@ -1001,6 +1133,9 @@ class NullNode(NodeLike, Null):
         Returns :class:`Null`
         """
         return Null()
+
+    def prettify(self):
+        return "Null Node"
 
 
 def either(*funcs):
