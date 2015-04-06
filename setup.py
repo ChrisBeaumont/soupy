@@ -10,9 +10,9 @@ except (IOError, ImportError):
 setup(
     name='soupy',
     py_modules=['soupy'],
-    version='0.1',
+    version='0.2',
     long_description=LONG_DESCRIPTION,
-    description='Cleaner wrangling of web documents',
+    description='Easier wrangling of web documents',
     author='chrisnbeaumont@gmail.com',
     author_email='chrisnbeaumont@gmail.com',
     url='http://github.com/ChrisBeaumont/soupy',
