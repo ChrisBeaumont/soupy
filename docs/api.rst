@@ -13,6 +13,8 @@ Main Wrapper Classes
    .. automethod:: dump
    .. automethod:: val
    .. automethod:: orelse
+   .. automethod:: nonnull
+   .. automethod:: require
 
 .. autoclass:: Collection
    :members:

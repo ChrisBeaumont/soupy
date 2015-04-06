@@ -9,6 +9,11 @@ import six
 from six.moves import map as imap
 
 
+__all__ = ['Soupy', 'Q', 'Node', 'Scalar', 'Collection',
+           'Null', 'NullNode', 'NullCollection',
+           'either', 'NullValueError']
+
+
 @six.add_metaclass(ABCMeta)
 class Wrapper(object):
 
@@ -91,8 +96,13 @@ class Wrapper(object):
                       for name, func in kwargs.items())
         return Wrapper.wrap(result)
 
+    @abstractmethod
+    def require(self, func, msg='Requirement Violated'):
+        pass  # pragma: no cover
+
 
 class NullValueError(ValueError):
+
     """
     The NullValueError exception is raised when attempting
     to extract values from Null objects
@@ -101,7 +111,8 @@ class NullValueError(ValueError):
 
 
 @six.python_2_unicode_compatible
-class Null(Wrapper):
+class BaseNull(Wrapper):
+
     """
     This is the base class for null wrappers. Null values are returned
     when the result of a function is ill-defined.
@@ -136,6 +147,15 @@ class Null(Wrapper):
         Raises :class:`NullValueError`
         """
         raise NullValueError()
+
+    def require(self, func, msg="Requirement is violated (wrapper is null)"):
+        """
+        Raises :class:`NullValueError`
+        """
+        raise NullValueError()
+
+    def __setitem__(self, key, val):
+        pass
 
     def __bool__(self):
         return False
@@ -208,6 +228,25 @@ class Some(Wrapper):
         """
         return self._value
 
+    def require(self, func, msg="Requirement violated"):
+        """
+        Assert that self.apply(func) is True.
+
+        Parameters:
+
+            func : func(wrapper)
+            msg : str
+               The error message to display on failure
+
+        Returns:
+
+            If self.apply(func) is True, returns self.
+            Otherwise, raises NullValueError.
+        """
+        if self.apply(func):
+            return self
+        raise NullValueError(msg)
+
     def __str__(self):
         # returns unicode
         # six builds appropriate py2/3 methods from this
@@ -221,8 +260,68 @@ class Some(Wrapper):
     def __repr__(self):
         return repr(self.__str__())[1:-1]  # trim off quotes
 
+    def __setitem__(self, key, val):
+        return self.map(Q.__setitem__(key, val))
+
+
+class Null(BaseNull):
+    """
+    The class for ill-defined Scalars.
+    """
+    def __getattr__(self, attr):
+        return Null()
+
+    def __call__(self, *args, **kwargs):
+        return Null()
+
+    def __eq__(self, other):
+        return Null()
+
+    def __ne__(self, other):
+        return Null()
+
+    def __gt__(self, other):
+        return Null()
+
+    def __ge__(self, other):
+        return Null()
+
+    def __lt__(self, other):
+        return Null()
+
+    def __le__(self, other):
+        return Null()
+
+    def __len__(self):
+        raise TypeError("Null has no len()")
+
+    def __add__(self, other):
+        return Null()
+
+    def __sub__(self, other):
+        return Null()
+
+    def __mul__(self, other):
+        return Null()
+
+    def __div__(self, other):
+        return Null()
+
+    def __floordiv__(self, other):
+        return Null()
+
+    def __pow__(self, other):
+        return Null()
+
+    def __mod__(self, other):
+        return Null()
+
+    def __truediv__(self, other):
+        return Null()
+
 
 class Scalar(Some):
+
     """
     A wrapper around single values.
 
@@ -250,6 +349,7 @@ class Scalar(Some):
         Scalar(7)
 
     """
+
     def __getattr__(self, attr):
         return self.map(operator.attrgetter(attr))
 
@@ -257,10 +357,10 @@ class Scalar(Some):
         return self.map(operator.methodcaller('__call__', *args, **kwargs))
 
     def __eq__(self, other):
-        return self.map(operator.methodcaller('__eq__', other))
+        return self.map(lambda x: x == other)
 
     def __ne__(self, other):
-        return self.map(operator.methodcaller('__ne__', other))
+        return self.map(lambda x: x != other)
 
     def __gt__(self, other):
         return self.map(lambda x: x > other)
@@ -283,39 +383,63 @@ class Scalar(Some):
         return len(self._value)
 
     def __add__(self, other):
+        if isinstance(other, BaseNull):
+            return other
         return self.map(Q + _unwrap(other))
 
     def __sub__(self, other):
+        if isinstance(other, BaseNull):
+            return other
         return self.map(Q - _unwrap(other))
 
     def __mul__(self, other):
+        if isinstance(other, BaseNull):
+            return other
         return self.map(Q * _unwrap(other))
 
     def __div__(self, other):
+        if isinstance(other, BaseNull):
+            return other
         return self.map(Q / _unwrap(other))
 
     def __floordiv__(self, other):
+        if isinstance(other, BaseNull):
+            return other
         return self.map(Q // _unwrap(other))
 
     def __pow__(self, other):
+        if isinstance(other, BaseNull):
+            return other
         return self.map(Q ** _unwrap(other))
 
     def __mod__(self, other):
+        if isinstance(other, BaseNull):
+            return other
         return self.map(Q % _unwrap(other))
 
     def __truediv__(self, other):
+        if isinstance(other, BaseNull):
+            return other
         return self.map(Q / _unwrap(other))
 
 
 class Collection(Some):
+
     """
     Collection's store lists of other wrappers.
 
     They support most of the list methods (len, iter, getitem, etc).
     """
+
     def __init__(self, items):
         super(Collection, self).__init__(list(items))
         self._items = self._value
+        self._assert_items_are_wrappers()
+
+    def _assert_items_are_wrappers(self):
+        for item in self:
+            if not isinstance(item, Wrapper):
+                raise TypeError("Collection can only hold other wrappers")
 
     def val(self):
         """
@@ -436,13 +560,87 @@ class Collection(Some):
         """
         return Scalar(len(self))
 
+    def zip(self, *others):
+        """
+        Zip the items of this collection with one or more
+        other sequences, and wrap the result.
 
-class NullCollection(Null, Collection):
+        Unlike Python's zip, all sequences must be the same length.
+
+        Parameters:
+
+            others: One or more iterables or Collections
+
+        Returns:
+
+            A new collection.
+
+        Examples:
+
+            >>> c1 = Collection([Scalar(1), Scalar(2)])
+            >>> c2 = Collection([Scalar(3), Scalar(4)])
+            >>> c1.zip(c2).val()
+            [(1, 3), (2, 4)]
+        """
+        args = [_unwrap(item) for item in (self,) + others]
+        ct = self.count()
+        if not all(len(arg) == ct for arg in args):
+            raise ValueError("Arguments are not all the same length")
+        return Collection(map(Wrapper.wrap, zip(*args)))
+
+    def dictzip(self, keys):
+        """
+        Turn this collection into a Scalar(dict), by zipping keys and items.
+
+        Parameters:
+
+            keys: list or Collection of NavigableStrings
+                The keys of the dictionary
+
+        Examples:
+
+            >>> c = Collection([Scalar(1), Scalar(2)])
+            >>> c.dictzip(['a', 'b']).val() == {'a': 1, 'b': 2}
+            True
+        """
+        return Scalar(dict(zip(_unwrap(keys), self.val())))
+
+    def __iter__(self):
+        for item in self._items:
+            yield item
+
+    def all(self):
+        """
+        Scalar(True) if all items are truthy, or collection is empty.
+        """
+        return self.map(all)
+
+    def any(self):
+        """
+        Scalar(True) if any items are truthy. False if empty.
+        """
+        return self.map(any)
+
+    def none(self):
+        """
+        Scalar(True) if no items are truthy, or collection is empty.
+        """
+        return self.map(lambda items: not any(items))
+
+    def __bool__(self):
+        return bool(self._items)
+
+    __nonzero__ = __bool__
+
+
+class NullCollection(BaseNull, Collection):
+
     """
     Represents in invalid Collection.
 
     Returned by some methods on other Null objects.
     """
+
     def __init__(self):
         pass
 
@@ -537,6 +735,10 @@ class NodeLike(object):
     def find_parents(self, *args, **kwargs):
         pass  # pragma: no cover
 
+    @abstractmethod
+    def prettify(self):
+        pass  # pragma: no cover
+
     def __iter__(self):
         for item in self.children:
             yield item
@@ -546,6 +748,7 @@ class NodeLike(object):
 
 
 class Node(NodeLike, Some):
+
     """
     The Node class is the main wrapper around
     BeautifulSoup elements like Tag. It implements many of the
@@ -755,8 +958,17 @@ class Node(NodeLike, Some):
         op = operator.methodcaller('select', selector)
         return self._wrap_multi(op)
 
+    def prettify(self):
+        return self.map(Q.prettify()).val()
+
+    def __bool__(self):
+        return True
+
+    __nonzero__ = __bool__
+
 
 class NavigableStringNode(Node):
+
     """
     The NavigableStringNode is a special case Node that wraps
     BeautifulSoup NavigableStrings. This class implements sensible
@@ -824,12 +1036,17 @@ class NavigableStringNode(Node):
         """
         return Collection([])
 
+    def prettify(self):
+        return self.text.val()
 
-class NullNode(NodeLike, Null):
+
+class NullNode(NodeLike, BaseNull):
+
     """
     NullNode is returned when a query doesn't match any node
     in the document.
     """
+
     def _get_null(self):
         """
         Returns the NullNode
@@ -916,6 +1133,9 @@ class NullNode(NodeLike, Null):
         Returns :class:`Null`
         """
         return Null()
+
+    def prettify(self):
+        return "Null Node"
 
 
 def either(*funcs):
