@@ -4,6 +4,32 @@ Getting Started
 
 .. currentmodule:: soupy
 
+The Problem Soupy Aims to Solve
+-------------------------------
+
+BeautifulSoup is a great library for searching through HTML and XML documents.
+However, the datatypes returned by BeautifulSoup methods can be inconsistent,
+especially with messily-structured files. For example, consider the following
+sensible query to find the first p tag inside the content div under an h2 tag:
+
+::
+
+  dom.find('h2').find('div', 'content').find('p')
+
+Depending on the document, each of these find calls may return a Tag, a unicode
+string, an integer (if the previous ``find`` returned a string instead of a
+Tag), None, or raise an AttributeError (if the previous ``find`` returned an
+integer or None instead of a Tag). Of these, only Tags can be safely chained
+together. In general, code like the line above risks generating exceptions. There are lots of other examples like this in BeautifulSoup.
+
+In a nutshell, Soupy lets you safely chain queries together more gracefully, even when searches fail.
+
+::
+
+    dom.find('h2').find('div', 'content').find('p').orelse('not found').val()
+
+Let's see how that works.
+
 Comparison to BeautifulSoup
 ---------------------------
 
@@ -70,7 +96,7 @@ a failed match, trying to extract any data raises an error:
   ...
   NullValueError:
 
-However the :meth:`Node.orelse` method can be used to specify a fallback
+Fortunately the :meth:`Node.orelse` method can be used to specify a fallback
 value when a query doesn't match:
 
 .. testsetup::
@@ -89,11 +115,12 @@ return None, sometimes certain methods or attributes aren't
 defined, etc.
 
 Soupy's API is more predictable, and better suited for searching through
-messily-formated documents. Here are the main properties and methods
-copied over from BeautifulSoup. All of these features perform the same
-conceptual task as in BeautifulSoup, but they *always* return the same
-wrapper class. The primary goal of Soupy's design is to allow you to string together complex queries, without worrying about query failures
-at each step of the search.
+messily-formated documents. Here are the main properties and methods copied over
+from BeautifulSoup. All of these features perform the same conceptual task as
+their BeautifulSoup counterparts, but they *always* return the same wrapper
+class. The primary goal of Soupy's design is to allow you to string together
+complex queries, without worrying about query failures at each step of the
+search.
 
 - Properties and Methods that return :class:`Node` (or :class:`NullNode`)
 
@@ -129,12 +156,12 @@ at each step of the search.
 Functional API
 --------------
 
-So far we have explored how Soupy wrappers allow us to chain together
-familiar features from the BeautifulSoup API, without worrying about
-corner cases at each step in the chain.
+The main benefit of Soupy's wrappers is the ability to reliably chain
+them together. This also allows you to use general purpose libraries
+like itertools, functools, toolz, more_itertools, etc., to compose
+more complex data processing pipelines. For convenience, Soupy also priovides
+several such utilities to support more extensive method chaining.
 
-Soupy also provides new functions that enable us to build richer
-expressions than what is possible with BeautifulSoup.
 
 Iterating over results with each, dump, dictzip
 ...............................................
@@ -159,7 +186,7 @@ consider the query to extract all the movie Titles on `this IMDB page <http://ch
 
    [u'The Shawshank Redemption', u'The Dark Knight', u'Inception',...]
 
-Soupy provides an alternative syntax via the :meth:`~Collection.each` method:
+Soupy provides an additional syntax for this with the :meth:`~Collection.each` method:
 
 
 .. doctest:: imdb
@@ -183,7 +210,7 @@ query can be written as
 
 Think of ``Q[stuff]`` as shorthand for ``lambda x: x[stuff]``.
 
-The :meth:`~Collection.dump` method works similarly to :meth:`~Collection.each`,
+The :meth:`Collection.dump` method works similarly to :meth:`~Collection.each`,
 except that it extracts multiple values from each node, and packs
 them into a list of dictionaries. It's a convenient way to extract a JSON blob out of a document.
 
@@ -203,7 +230,7 @@ For example,
 
 .. note::
 
-    You can also run dump on a single node to extract a single dictionary.
+    You can also run dump on a node to extract a single dictionary.
 
 If you want to set keys based on a list of values (instead of hardcoding them),
 you can use the :meth:`Collection.dictzip` method.
