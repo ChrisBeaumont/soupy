@@ -9,7 +9,7 @@ from six import PY3, text_type
 
 from soupy import (Soupy, Node, NullValueError, NullNode,
                    Collection, NullCollection, Null, Q,
-                   Scalar, Wrapper, NavigableStringNode, either)
+                   Scalar, Wrapper, NavigableStringNode, either, QDebug)
 
 
 COLLECTION_PROPS = ('children',
@@ -139,6 +139,8 @@ class TestNode(object):
         s = Soupy('<html>∂ƒ</html>')
         print(s)
         print(repr(s))
+        if not PY3:  # must be ascii-encodable on py2
+            assert repr(s).encode('ascii')
         print(text_type(s))
 
     def test_prettify(self):
@@ -664,6 +666,75 @@ class TestExpression(object):
         assert (Q // 2).__eval__(4) == 2
         assert (Q % 2).__eval__(3) == 1
         assert (Q ** 2).__eval__(3) == 9
+
+
+    @pytest.mark.parametrize(('expr', 'rep'), [
+        (Q, 'Q'),
+        (Q.foo, 'Q.foo'),
+        (Q.foo(3), 'Q.foo(3)'),
+        (Q.foo(3, 4), 'Q.foo(3, 4)'),
+        (Q.foo(3, 'a'), "Q.foo(3, 'a')"),
+        (Q.foo(bar=1), "Q.foo(**{'bar': 1})"),
+        (Q.foo(3, bar=1), "Q.foo(3, **{'bar': 1})"),
+        (Q.foo(3).bar, "Q.foo(3).bar"),
+        (Q[3], "Q[3]"),
+        (Q[3:4], "Q[slice(3, 4, None)]"),
+        (Q[3, 4, 5], "Q[(3, 4, 5)]"),
+        (Q + 3, "Q + 3"),
+        ((Q + 3) * 5, "(Q + 3) * 5"),
+        (5 * (Q + 3), "5 * (Q + 3)"),
+        (Q.map(Q+3), "Q.map(Q + 3)"),
+        (Q['∂ƒ'], "Q['∂ƒ']"),
+        (Q('∂ƒ'), "Q('∂ƒ')"),
+        (Q[b'\xc6'], "Q['\\xc6']"),
+        (Q[b'\xc6'], "Q['\\xc6']"),
+        (Q(b'"\''), "Q('\"\'')"),
+        (Q('"\''), "Q('\"\'')"),
+        (Q(b'"\'\xc6'), "Q('\"\\\'\\xc6')"),
+        (Q['"\''], "Q['\"\'']"),
+        (Q[b'"\'\xc6'], "Q['\"\\\'\\xc6']"),
+        ])
+    def test_str(self, expr, rep):
+        assert text_type(expr) == rep
+        # repr should be ascii on py2
+        if not PY3:
+            assert repr(expr).encode('ascii')
+
+
+    def test_nice_exception_message(self):
+        val = str('test')
+        with pytest.raises(AttributeError) as exc:
+            expr = Q.upper().foo.__eval__(val)
+        assert exc.value.args[0] == (
+            "'str' object has no attribute 'foo'"
+            "\n\n\tEncountered when evaluating 'TEST'.foo"
+        )
+
+    def test_nice_long_exception_message(self):
+        val = str('a' * 500)
+        with pytest.raises(AttributeError) as exc:
+            expr = Q.upper().foo.__eval__(val)
+        assert exc.value.args[0] == (
+            "'str' object has no attribute 'foo'"
+            "\n\n\tEncountered when evaluating <str instance>.foo"
+        )
+
+    def test_debug_method(self):
+        with pytest.raises(AttributeError):
+            Q.upper().foo.__eval__('test')
+
+        dbg = Q.debug_()
+        assert isinstance(dbg, QDebug)
+        assert repr(dbg.full_expr) == 'Q.upper().foo'
+        assert repr(dbg.expr) == '.foo'
+        assert dbg.val == 'TEST'
+
+    def test_debug_method_empty(self):
+        del Q.__debug_info__
+        dbg = Q.debug_()
+
+        assert isinstance(dbg, QDebug)
+        assert dbg == (None, None, None)
 
 
 def _public_api(cls):

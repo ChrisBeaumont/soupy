@@ -65,7 +65,8 @@ identical:
 
 Notice that in these examples, the only difference is that
 you always call ``val()`` to pull data out of a Soupy wrapper
-when you are ready.
+when you are ready. **This is the essential concept to learn
+when transitioning from BeautifulSoup to Soupy**.
 
 Things get more interesting when we look at corner cases (and
 the web is *full* of corner cases). For example,
