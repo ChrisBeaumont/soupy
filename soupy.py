@@ -2,6 +2,7 @@ from __future__ import print_function, division, unicode_literals
 
 from abc import ABCMeta, abstractproperty, abstractmethod
 from collections import namedtuple
+from functools import wraps
 from itertools import takewhile, dropwhile
 import operator
 import re
@@ -111,12 +112,23 @@ class Wrapper(object):
 
 
 class NullValueError(ValueError):
-
     """
     The NullValueError exception is raised when attempting
     to extract values from Null objects
     """
     pass
+
+
+class QKeyError(KeyError):
+    """
+    A custom KeyError subclass that better formats
+    exception messages raised inside expressions
+    """
+    def __str__(self):
+        parts = self.args[0].split('\n\n\t')
+        return parts[0] + '\n\n\t' + _dequote(repr(parts[1]))
+
+QKeyError.__name__ = str('KeyError')
 
 
 @six.python_2_unicode_compatible
@@ -1177,6 +1189,8 @@ def _helpful_failure(method):
     Decorator for __eval__ that prints a helpful error message
     if an exception is generated in a Q expression
     """
+
+    @wraps(method)
     def wrapper(self, val):
         try:
             return method(self, val)
@@ -1186,6 +1200,9 @@ def _helpful_failure(method):
             if hasattr(inst, '_RERAISE'):
                 Q.__debug_info__ = QDebug(self, *Q.__debug_info__[1:])
                 raise
+
+            if issubclass(exc_cls, KeyError):
+                exc_cls = QKeyError
 
             # Show val, unless it's too long
             prettyval = repr(val)
@@ -1206,7 +1223,11 @@ def _helpful_failure(method):
 
 @six.python_2_unicode_compatible
 class Expression(object):
+    """
+    Soupy expressions are a shorthand for building single-argument functions.
 
+    Users should use the ``Q`` object, which is just an instance of Expression.
+    """
     def __str__(self):
         return 'Q'
 
@@ -1275,6 +1296,12 @@ class Expression(object):
 
     @_helpful_failure
     def __eval__(self, val):
+        """
+        Pass the argument ``val`` to the function, and return the result.
+
+        This special method is necessary because the ``__call__`` method
+        builds a new function stead of evaluating the current one.
+        """
         return val
 
     def debug_(self):
