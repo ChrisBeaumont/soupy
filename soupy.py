@@ -1238,7 +1238,7 @@ class Expression(object):
         yield self
 
     def _chain(self, other):
-        return Chain(tuple(self) + tuple(other))
+        return Chain(tuple(iter(self)) + tuple(iter(other)))
 
     def __getattr__(self, key):
         return self._chain(Attr(key))
