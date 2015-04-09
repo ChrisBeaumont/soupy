@@ -9,7 +9,8 @@ from six import PY3, text_type
 
 from soupy import (Soupy, Node, NullValueError, NullNode,
                    Collection, NullCollection, Null, Q,
-                   Scalar, Wrapper, NavigableStringNode, either, QDebug)
+                   Scalar, Wrapper, NavigableStringNode, either, QDebug,
+                   _dequote)
 
 
 COLLECTION_PROPS = ('children',
@@ -765,3 +766,12 @@ def test_collection_api():
     Collection and NullCollection have identical interfaces
     """
     assert _public_api(Collection) == _public_api(NullCollection)
+
+def test_dequote():
+
+    assert _dequote("u'hi'") == 'hi'
+    assert _dequote("b'hi'") == 'hi'
+    assert _dequote("'hi'") == 'hi'
+    assert _dequote('u"hi \'there\'"') == "hi 'there'"
+    with pytest.raises(AssertionError):
+        _dequote('abc')
