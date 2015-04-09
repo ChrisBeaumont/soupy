@@ -1,6 +1,6 @@
 # Soupy
 
-[![Build Status](https://travis-ci.org/ChrisBeaumont/soupy.svg)](https://travis-ci.org/ChrisBeaumont/soupy) [![Coverage Status](https://coveralls.io/repos/ChrisBeaumont/soupy/badge.svg)](https://coveralls.io/r/ChrisBeaumont/soupy)
+[![Build Status](https://travis-ci.org/ChrisBeaumont/soupy.svg?branch=master)](https://travis-ci.org/ChrisBeaumont/soupy) [![Coverage Status](https://coveralls.io/repos/ChrisBeaumont/soupy/badge.svg)](https://coveralls.io/r/ChrisBeaumont/soupy)
 
 
 Soupy is a wrapper around BeautifulSoup that makes it easier
