@@ -189,6 +189,16 @@ class BaseNull(Wrapper):
 
     __repr__ = __str__
 
+    def __hash__(self):
+        return hash(type(self))
+
+    def __eq__(self, other):
+        return type(self)()
+
+    def __ne__(self, other):
+        return type(self)()
+
+
 
 @six.python_2_unicode_compatible
 class Some(Wrapper):
@@ -280,6 +290,15 @@ class Some(Wrapper):
     def __setitem__(self, key, val):
         return self.map(Q.__setitem__(key, val))
 
+    def __hash__(self):
+        return hash(self._value)
+
+    def __eq__(self, other):
+        return self.map(lambda x: x == other)
+
+    def __ne__(self, other):
+        return self.map(lambda x: x != other)
+
 
 class Null(BaseNull):
     """
@@ -289,12 +308,6 @@ class Null(BaseNull):
         return Null()
 
     def __call__(self, *args, **kwargs):
-        return Null()
-
-    def __eq__(self, other):
-        return Null()
-
-    def __ne__(self, other):
         return Null()
 
     def __gt__(self, other):
@@ -336,6 +349,9 @@ class Null(BaseNull):
     def __truediv__(self, other):
         return Null()
 
+    def __hash__(self):
+        return super(Null, self).__hash__()
+
 
 class Scalar(Some):
 
@@ -372,12 +388,6 @@ class Scalar(Some):
 
     def __call__(self, *args, **kwargs):
         return self.map(operator.methodcaller('__call__', *args, **kwargs))
-
-    def __eq__(self, other):
-        return self.map(lambda x: x == other)
-
-    def __ne__(self, other):
-        return self.map(lambda x: x != other)
 
     def __gt__(self, other):
         return self.map(lambda x: x > other)
@@ -978,6 +988,9 @@ class Node(NodeLike, Some):
     def prettify(self):
         return self.map(Q.prettify()).val()
 
+    def __len__(self):
+        return len(self._value)
+
     def __bool__(self):
         return True
 
@@ -1153,6 +1166,9 @@ class NullNode(NodeLike, BaseNull):
 
     def prettify(self):
         return "Null Node"
+
+    def __len__(self):
+        return 0
 
 
 def either(*funcs):

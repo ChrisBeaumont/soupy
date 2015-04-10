@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from six import PY3, text_type
 
 from soupy import (Soupy, Node, NullValueError, NullNode,
-                   Collection, NullCollection, Null, Q,
+                   Collection, NullCollection, Null, Q, Some,
                    Scalar, Wrapper, NavigableStringNode, either, QDebug,
                    _dequote)
 
@@ -274,8 +274,20 @@ class TestScalar(object):
         s['b'] = 2
         assert s.val() == {'a': 1, 'b': 2}
 
+    def test_hash(self):
+        """
+        wrappers are hashed by their content
+        """
+        assert hash(Scalar(2)) == hash(Scalar(2))
+        assert hash(Some(2)) == hash(Some(2))
+
 
 class TestNull(object):
+
+    def test_hash(self):
+        # hashing uses the type
+        assert hash(Null()) == hash(Null())
+        assert hash(Null()) != hash(NullNode())
 
     def test_call(self):
         assert isinstance(Null()(), Null)
@@ -329,6 +341,9 @@ class TestNullNode(object):
 
     def test_str(self):
         assert str(NullNode()) == "NullNode()"
+
+    def test_len(self):
+        assert len(NullNode()) == 0
 
     def test_val_raises(self):
         with pytest.raises(NullValueError):
