@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from six import PY3, text_type
 
 from soupy import (Soupy, Node, NullValueError, NullNode,
-                   Collection, NullCollection, Null, Q,
+                   Collection, NullCollection, Null, Q, Some,
                    Scalar, Wrapper, NavigableStringNode, either, QDebug,
                    _dequote)
 
@@ -279,6 +279,7 @@ class TestScalar(object):
         wrappers are hashed by their content
         """
         assert hash(Scalar(2)) == hash(Scalar(2))
+        assert hash(Some(2)) == hash(Some(2))
 
     def test_hash_of_unhashable(self):
         """

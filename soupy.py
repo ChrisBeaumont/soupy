@@ -345,6 +345,9 @@ class Null(BaseNull):
     def __truediv__(self, other):
         return Null()
 
+    def __hash__(self):
+        return super(Null, self).__hash__()
+
 
 class Scalar(Some):
 
@@ -447,6 +450,10 @@ class Scalar(Some):
         if isinstance(other, BaseNull):
             return other
         return self.map(Q / _unwrap(other))
+
+    def __hash__(self):
+        # must explicitly override for py3
+        return super(Scalar, self).__hash__()
 
 
 class Collection(Some):
