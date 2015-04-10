@@ -9,7 +9,8 @@ from six import PY3, text_type
 
 from soupy import (Soupy, Node, NullValueError, NullNode,
                    Collection, NullCollection, Null, Q,
-                   Scalar, Wrapper, NavigableStringNode, either)
+                   Scalar, Wrapper, NavigableStringNode, either, QDebug,
+                   _dequote)
 
 
 COLLECTION_PROPS = ('children',
@@ -139,6 +140,8 @@ class TestNode(object):
         s = Soupy('<html>∂ƒ</html>')
         print(s)
         print(repr(s))
+        if not PY3:  # must be ascii-encodable on py2
+            assert repr(s).encode('ascii')
         print(text_type(s))
 
     def test_prettify(self):
@@ -635,35 +638,110 @@ class TestExpression(object):
 
     def test_operators(self):
 
-        assert (Q > 1).__eval__(2)
-        assert (Q >= 1).__eval__(1)
-        assert (Q <= 1).__eval__(1)
-        assert (Q < 1).__eval__(0)
-        assert (Q == 1).__eval__(1)
-        assert (Q != 1).__eval__(2)
+        assert (Q > 1).eval_(2)
+        assert (Q >= 1).eval_(1)
+        assert (Q <= 1).eval_(1)
+        assert (Q < 1).eval_(0)
+        assert (Q == 1).eval_(1)
+        assert (Q != 1).eval_(2)
 
-        assert not (Q > 1).__eval__(1)
-        assert not (Q >= 1).__eval__(0)
-        assert not (Q <= 1).__eval__(2)
-        assert not (Q < 1).__eval__(1)
-        assert not (Q == 1).__eval__(2)
-        assert not (Q != 1).__eval__(1)
+        assert not (Q > 1).eval_(1)
+        assert not (Q >= 1).eval_(0)
+        assert not (Q <= 1).eval_(2)
+        assert not (Q < 1).eval_(1)
+        assert not (Q == 1).eval_(2)
+        assert not (Q != 1).eval_(1)
 
-        assert (Q <= Q).__eval__(5)
+        assert (Q <= Q).eval_(5)
 
-        assert (Q + 5).__eval__(2) == 7
-        assert (Q - 1).__eval__(1) == 0
-        assert (Q * 2).__eval__(4) == 8
+        assert (Q + 5).eval_(2) == 7
+        assert (Q - 1).eval_(1) == 0
+        assert (Q * 2).eval_(4) == 8
 
         if not PY3:
-            assert operator.div(Q, 2).__eval__(3) == 1
+            assert operator.div(Q, 2).eval_(3) == 1
 
-        assert operator.truediv(Q, 2).__eval__(3) == 1.5
+        assert operator.truediv(Q, 2).eval_(3) == 1.5
 
-        assert (Q / 2).__eval__(4) == 2.0
-        assert (Q // 2).__eval__(4) == 2
-        assert (Q % 2).__eval__(3) == 1
-        assert (Q ** 2).__eval__(3) == 9
+        assert (Q / 2).eval_(4) == 2.0
+        assert (Q // 2).eval_(4) == 2
+        assert (Q % 2).eval_(3) == 1
+        assert (Q ** 2).eval_(3) == 9
+
+    @pytest.mark.parametrize(('expr', 'rep'), [
+        (Q, 'Q'),
+        (Q.foo, 'Q.foo'),
+        (Q.foo(3), 'Q.foo(3)'),
+        (Q.foo(3, 4), 'Q.foo(3, 4)'),
+        (Q.foo(3, 'a'), "Q.foo(3, 'a')"),
+        (Q.foo(bar=1), "Q.foo(**{'bar': 1})"),
+        (Q.foo(3, bar=1), "Q.foo(3, **{'bar': 1})"),
+        (Q.foo(3).bar, "Q.foo(3).bar"),
+        (Q[3], "Q[3]"),
+        (Q[3:4], "Q[slice(3, 4, None)]"),
+        (Q[3, 4, 5], "Q[(3, 4, 5)]"),
+        (Q + 3, "Q + 3"),
+        ((Q + 3) * 5, "(Q + 3) * 5"),
+        (5 * (Q + 3), "5 * (Q + 3)"),
+        (Q.map(Q + 3), "Q.map(Q + 3)"),
+        (Q['∂ƒ'], "Q['∂ƒ']"),
+        (Q('∂ƒ'), "Q('∂ƒ')"),
+        (Q[b'\xc6'], "Q['\\xc6']"),
+        (Q[b'\xc6'], "Q['\\xc6']"),
+        (Q(b'"\''), "Q('\"\'')"),
+        (Q('"\''), "Q('\"\'')"),
+        (Q(b'"\'\xc6'), "Q('\"\\\'\\xc6')"),
+        (Q['"\''], "Q['\"\'']"),
+        (Q[b'"\'\xc6'], "Q['\"\\\'\\xc6']"),
+    ])
+    def test_str(self, expr, rep):
+        assert text_type(expr) == rep
+        # repr should be ascii on py2
+        if not PY3:
+            assert repr(expr).encode('ascii')
+
+    def test_nice_exception_message(self):
+        val = str('test')
+        with pytest.raises(AttributeError) as exc:
+            Q.upper().foo.eval_(val)
+        assert exc.value.args[0] == (
+            "'str' object has no attribute 'foo'"
+            "\n\n\tEncountered when evaluating 'TEST'.foo"
+        )
+
+    def test_nice_exception_message_with_key_error(self):
+        with pytest.raises(KeyError) as exc:
+            Q[str('a')].eval_({})
+        assert str(exc.value) == (
+            "'a'\n\n\tEncountered when evaluating {}['a']"
+        )
+
+    def test_nice_long_exception_message(self):
+        val = str('a' * 500)
+        with pytest.raises(AttributeError) as exc:
+            Q.upper().foo.eval_(val)
+        assert exc.value.args[0] == (
+            "'str' object has no attribute 'foo'"
+            "\n\n\tEncountered when evaluating <str instance>.foo"
+        )
+
+    def test_debug_method(self):
+        with pytest.raises(AttributeError):
+            Q.upper().foo.eval_('test')
+
+        dbg = Q.debug_()
+        assert isinstance(dbg, QDebug)
+        assert repr(dbg.expr) == 'Q.upper().foo'
+        assert repr(dbg.inner_expr) == '.foo'
+        assert dbg.val == 'test'
+        assert dbg.inner_val == 'TEST'
+
+    def test_debug_method_empty(self):
+        del Q.__debug_info__
+        dbg = Q.debug_()
+
+        assert isinstance(dbg, QDebug)
+        assert dbg == (None, None, None, None)
 
 
 def _public_api(cls):
@@ -694,3 +772,13 @@ def test_collection_api():
     Collection and NullCollection have identical interfaces
     """
     assert _public_api(Collection) == _public_api(NullCollection)
+
+
+def test_dequote():
+
+    assert _dequote("u'hi'") == 'hi'
+    assert _dequote("b'hi'") == 'hi'
+    assert _dequote("'hi'") == 'hi'
+    assert _dequote('u"hi \'there\'"') == "hi 'there'"
+    with pytest.raises(AssertionError):
+        _dequote('abc')

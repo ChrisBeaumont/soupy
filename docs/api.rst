@@ -39,3 +39,12 @@ Null Wrappers
 
 .. autoclass:: NullCollection
    :members:
+
+
+Expressions
+===========
+
+.. autoclass:: Expression
+   :members:
+
+.. autoclass:: QDebug

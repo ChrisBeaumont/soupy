@@ -1,17 +1,28 @@
 from __future__ import print_function, division, unicode_literals
 
 from abc import ABCMeta, abstractproperty, abstractmethod
+from collections import namedtuple
+from functools import wraps
 from itertools import takewhile, dropwhile
 import operator
+import re
+import sys
 
 from bs4 import BeautifulSoup, PageElement, NavigableString
 import six
-from six.moves import map as imap
+from six.moves import map
 
 
 __all__ = ['Soupy', 'Q', 'Node', 'Scalar', 'Collection',
            'Null', 'NullNode', 'NullCollection',
-           'either', 'NullValueError']
+           'either', 'NullValueError', 'QDebug']
+
+
+# extract the thing inside string reprs (eg u'abc' -> abc)
+QUOTED_STR = re.compile("^[ub]?['\"](.*?)['\"]$")
+
+QDebug = namedtuple('QDebug', ('expr', 'inner_expr', 'val', 'inner_val'))
+"""Namedtuple that holds information about a failed expression evaluation."""
 
 
 @six.add_metaclass(ABCMeta)
@@ -102,12 +113,23 @@ class Wrapper(object):
 
 
 class NullValueError(ValueError):
-
     """
     The NullValueError exception is raised when attempting
     to extract values from Null objects
     """
     pass
+
+
+class QKeyError(KeyError):
+    """
+    A custom KeyError subclass that better formats
+    exception messages raised inside expressions
+    """
+    def __str__(self):
+        parts = self.args[0].split('\n\n\t')
+        return parts[0] + '\n\n\t' + _dequote(repr(parts[1]))
+
+QKeyError.__name__ = str('KeyError')
 
 
 @six.python_2_unicode_compatible
@@ -250,12 +272,7 @@ class Some(Wrapper):
     def __str__(self):
         # returns unicode
         # six builds appropriate py2/3 methods from this
-        value = repr(self._value)
-
-        if isinstance(value, six.binary_type):
-            value = value.decode('utf-8')
-
-        return "%s(%s)" % (type(self).__name__, value)
+        return "%s(%s)" % (type(self).__name__, _repr(self._value))
 
     def __repr__(self):
         return repr(self.__str__())[1:-1]  # trim off quotes
@@ -466,7 +483,7 @@ class Collection(Some):
         Returns a new Collection.
         """
         func = _make_callable(func)
-        return Collection(imap(func, self._items))
+        return Collection(map(func, self._items))
 
     def filter(self, func):
         """
@@ -767,7 +784,7 @@ class Node(NodeLike, Some):
 
     def _wrap_multi(self, func):
         vals = func(self._value)
-        return Collection(imap(Node, vals))
+        return Collection(map(Node, vals))
 
     def _wrap_scalar(self, func):
         val = func(self._value)
@@ -1168,20 +1185,62 @@ def either(*funcs):
     return either
 
 
+def _helpful_failure(method):
+    """
+    Decorator for eval_ that prints a helpful error message
+    if an exception is generated in a Q expression
+    """
+
+    @wraps(method)
+    def wrapper(self, val):
+        try:
+            return method(self, val)
+        except:
+            exc_cls, inst, tb = sys.exc_info()
+
+            if hasattr(inst, '_RERAISE'):
+                _, expr, _, inner_val = Q.__debug_info__
+                Q.__debug_info__ = QDebug(self, expr, val, inner_val)
+                raise
+
+            if issubclass(exc_cls, KeyError):  # Overrides formatting
+                exc_cls = QKeyError
+
+            # Show val, unless it's too long
+            prettyval = repr(val)
+            if len(prettyval) > 150:
+                prettyval = "<%s instance>" % (type(val).__name__)
+
+            msg = "{0}\n\n\tEncountered when evaluating {1}{2}".format(
+                inst, prettyval, self)
+
+            new_exc = exc_cls(msg)
+            new_exc._RERAISE = True
+            Q.__debug_info__ = QDebug(self, self, val, val)
+
+            six.reraise(exc_cls, new_exc, tb)
+
+    return wrapper
+
+
+@six.python_2_unicode_compatible
 class Expression(object):
+    """
+    Soupy expressions are a shorthand for building single-argument functions.
+
+    Users should use the ``Q`` object, which is just an instance of Expression.
+    """
+    def __str__(self):
+        return 'Q'
+
+    def __repr__(self):
+        return repr(str(self))[1:-1]  # trim quotes
+
+    def __iter__(self):
+        yield self
 
     def _chain(self, other):
-        ops = []
-        if isinstance(self, Chain):
-            ops = self._items
-        else:
-            ops = [self]
-        if isinstance(other, Chain):
-            ops.extend(other._items)
-        else:
-            ops.append(other)
-
-        return Chain(ops)
+        return Chain(tuple(iter(self)) + tuple(iter(other)))
 
     def __getattr__(self, key):
         return self._chain(Attr(key))
@@ -1193,119 +1252,236 @@ class Expression(object):
         return self._chain(Call(args, kwargs))
 
     def __gt__(self, other):
-        return BinaryOp(operator.gt, self, other)
+        return BinaryOp(operator.gt, '>', self, other)
 
     def __ge__(self, other):
-        return BinaryOp(operator.ge, self, other)
+        return BinaryOp(operator.ge, '>=', self, other)
 
     def __lt__(self, other):
-        return BinaryOp(operator.lt, self, other)
+        return BinaryOp(operator.lt, '<', self, other)
 
     def __le__(self, other):
-        return BinaryOp(operator.le, self, other)
+        return BinaryOp(operator.le, '<=', self, other)
 
     def __eq__(self, other):
-        return BinaryOp(operator.eq, self, other)
+        return BinaryOp(operator.eq, '==', self, other)
 
     def __ne__(self, other):
-        return BinaryOp(operator.ne, self, other)
+        return BinaryOp(operator.ne, '!=', self, other)
 
     def __add__(self, other):
-        return BinaryOp(operator.add, self, other)
+        return BinaryOp(operator.add, '+', self, other)
 
     def __sub__(self, other):
-        return BinaryOp(operator.sub, self, other)
+        return BinaryOp(operator.sub, '-', self, other)
 
     def __div__(self, other):
-        return BinaryOp(operator.__div__, self, other)
+        return BinaryOp(operator.__div__, '/', self, other)
 
     def __floordiv__(self, other):
-        return BinaryOp(operator.floordiv, self, other)
+        return BinaryOp(operator.floordiv, '//', self, other)
 
     def __truediv__(self, other):
-        return BinaryOp(operator.truediv, self, other)
+        return BinaryOp(operator.truediv, '/', self, other)
 
     def __mul__(self, other):
-        return BinaryOp(operator.mul, self, other)
+        return BinaryOp(operator.mul, '*', self, other)
+
+    def __rmul__(self, other):
+        return BinaryOp(operator.mul, '*', other, self)
 
     def __pow__(self, other):
-        return BinaryOp(operator.pow, self, other)
+        return BinaryOp(operator.pow, '**', self, other)
 
     def __mod__(self, other):
-        return BinaryOp(operator.mod, self, other)
+        return BinaryOp(operator.mod, '%', self, other)
 
-    def __eval__(self, val):
+    @_helpful_failure
+    def eval_(self, val):
+        """
+        Pass the argument ``val`` to the function, and return the result.
+
+        This special method is necessary because the ``__call__`` method
+        builds a new function stead of evaluating the current one.
+        """
         return val
 
+    def debug_(self):
+        """
+        Returns debugging information for the previous error raised
+        during expression evaluation.
 
+        Returns a QDebug namedtuple with four fields:
+
+          - expr is the last full expression to have raised an exception
+          - inner_expr is the specific sub-expression that raised the exception
+          - val is the value that expr tried to evaluate.
+          - inner_val is the value that inner_expr tried to evaluate
+
+        If no exceptions have been triggered from expression evaluation,
+        then each field is None.
+
+        Examples:
+
+            >>> Scalar('test').map(Q.upper().foo)
+            Traceback (most recent call last):
+            ...
+            AttributeError: 'str' object has no attribute 'foo'
+            ...
+            >>> dbg = Q.debug_()
+            >>> dbg.expr
+            Q.upper().foo
+            >>> dbg.inner_expr
+            .foo
+            >>> dbg.val
+            'test'
+            >>> dbg.inner_val
+            'TEST'
+        """
+        result = self.__debug_info__
+        if isinstance(result, QDebug):
+            return result
+        return QDebug(None, None, None, None)
+
+
+@six.python_2_unicode_compatible
 class Call(Expression):
-
+    """An expression for calling a function or method"""
     def __init__(self, args, kwargs):
         self._args = args
         self._kwargs = kwargs
 
-    def __eval__(self, val):
+    @_helpful_failure
+    def eval_(self, val):
         return val.__call__(*self._args, **self._kwargs)
 
+    def __str__(self):
+        result = list(map(_uniquote, self._args))
+        if self._kwargs:
+            result.append('**%s' % _uniquote(self._kwargs))
+        return '(%s)' % (', '.join(result))
 
+
+@six.python_2_unicode_compatible
 class BinaryOp(Expression):
-
-    def __init__(self, op, left, right):
+    """A binary operation"""
+    def __init__(self, op, symbol, left, right):
         self.op = op
         self.left = left
         self.right = right
+        self.symbol = symbol
 
-    def __eval__(self, val):
+    @_helpful_failure
+    def eval_(self, val):
         left = self.left
         right = self.right
         if isinstance(left, Expression):
-            left = left.__eval__(val)
+            left = left.eval_(val)
 
         if isinstance(right, Expression):
-            right = right.__eval__(val)
+            right = right.eval_(val)
 
         return self.op(left, right)
 
+    def __str__(self):
+        l, r = self.left, self.right
+        if isinstance(l, BinaryOp):
+            l = '(%s)' % str(l)
+        if isinstance(r, BinaryOp):
+            r = '(%s)' % str(r)
 
+        return "%s %s %s" % (l, self.symbol, r)
+
+
+@six.python_2_unicode_compatible
 class Attr(Expression):
-
+    """An expression for fetching an attribute (eg, obj.item)"""
     def __init__(self, attribute_name):
         self._name = attribute_name
 
-    def __eval__(self, val):
+    @_helpful_failure
+    def eval_(self, val):
         return operator.attrgetter(self._name)(val)
 
+    def __str__(self):
+        return '.%s' % self._name
 
+
+@six.python_2_unicode_compatible
 class GetItem(Expression):
-
+    """An expression for getting an item (eg, obj['item'])"""
     def __init__(self, key):
         self._name = key
 
-    def __eval__(self, val):
+    @_helpful_failure
+    def eval_(self, val):
         return operator.itemgetter(self._name)(val)
 
+    def __str__(self):
+        return "[%s]" % _uniquote(self._name)
 
+
+@six.python_2_unicode_compatible
 class Chain(Expression):
-
+    """An chain of expressions (eg a.b.c)"""
     def __init__(self, items):
         self._items = items
 
-    def __eval__(self, val):
+    def __iter__(self):
         for item in self._items:
-            val = item.__eval__(val)
+            yield item
+
+    @_helpful_failure
+    def eval_(self, val):
+        for item in self._items:
+            val = item.eval_(val)
         return val
+
+    def __str__(self):
+        return ''.join(map(_uniquote, self._items))
 
 
 def _make_callable(func):
-    # If func is an expression, we call via __eval__
+    # If func is an expression, we call via eval_
     # otherwise, we call func directly
-    return getattr(func, '__eval__', func)
+    return getattr(func, 'eval_', func)
 
 
 def _unwrap(val):
     if isinstance(val, Wrapper):
         return val.val()
     return val
+
+
+def _dequote(str):
+    try:
+        return QUOTED_STR.findall(str)[0]
+    except IndexError:
+        raise AssertionError("Not a quoted string")
+
+
+def _uniquote(value):
+    """
+    Convert to unicode, and add quotes if initially a string
+    """
+    if isinstance(value, six.binary_type):
+        try:
+            value = value.decode('utf-8')
+        except UnicodeDecodeError:  # Not utf-8. Show the repr
+            value = six.text_type(_dequote(repr(value)))  # trim quotes
+
+    result = six.text_type(value)
+
+    if isinstance(value, six.text_type):
+        result = "'%s'" % result
+    return result
+
+
+def _repr(value):
+    value = repr(value)
+    if isinstance(value, six.binary_type):
+        value = value.decode('utf-8')
+    return value
 
 
 class Soupy(Node):

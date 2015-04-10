@@ -65,7 +65,8 @@ identical:
 
 Notice that in these examples, the only difference is that
 you always call ``val()`` to pull data out of a Soupy wrapper
-when you are ready.
+when you are ready. **This is the essential concept to learn
+when transitioning from BeautifulSoup to Soupy**.
 
 Things get more interesting when we look at corner cases (and
 the web is *full* of corner cases). For example,
@@ -156,11 +157,12 @@ search.
 Functional API
 --------------
 
-The main benefit of Soupy's wrappers is the ability to reliably chain
-them together. This also allows you to use general purpose libraries
-like itertools, functools, toolz, more_itertools, etc., to compose
-more complex data processing pipelines. For convenience, Soupy also priovides
-several such utilities to support more extensive method chaining.
+The main benefit of Soupy's wrappers is the ability to reliably chain them
+together. This also allows you to use general purpose libraries like itertools,
+functools, `toolz <http://toolz.readthedocs.org/en/latest/>`_,  `more_itertools
+<https://pythonhosted.org/more-itertools/index.html>`_,  etc., to compose more
+complex data processing pipelines. For convenience, Soupy also priovides several
+such utilities to support more extensive method chaining.
 
 
 Iterating over results with each, dump, dictzip
@@ -168,7 +170,7 @@ Iterating over results with each, dump, dictzip
 
 A common pattern in BeautifulSoup is to iterate over results from a
 call like :meth:`~Node.find_all` using a list comprehension. For example,
-consider the query to extract all the movie Titles on `this IMDB page <http://chrisbeaumont.github.io/soupy/imdb_demo.html>`_
+consider the query to extract all the movie titles on `this IMDB page <http://chrisbeaumont.github.io/soupy/imdb_demo.html>`_
 
 
 .. testcode:: imdb
@@ -380,4 +382,96 @@ the result isn't Truthy.
   ...
   NullValueError: Too small!
 
+
+Working with Q Expressions
+--------------------------
+
+Many of the previous examples have used the `Q` function-builder as a
+shorthand for ``lambda`` or manually defined functions. As mentioned
+above, ``Q[stuff]`` is rougly equivalent to ``lambda x: x[stuff]``,
+so it should feel natural to pick up. Here are some example Q expressions,
+and their lambda equivalents:
+
+
+   ================== ====================================
+   Q Expression       lambda expression
+   ================== ====================================
+   ``Q + 3``          ``lambda x: x + 3``
+   ``Q.a``            ``lambda x: x.a``
+   ``Q(5)``           ``lambda x: x(5)``
+   ``Q.func(3)``      ``lambda x: x.func(3)``
+   ``Q[key]``         ``lambda x: x['key']``
+   ``Q.map(Q > 3)``   ``lambda x: x.map(lambda y: y > 3)``
+   ================== ====================================
+
+The third example introduces a slight twist with Q expressions. Because
+``Q(5)`` builds a function like ``lambda x: x(5)``, we can't directly
+call this function using the normal ``(arg)`` syntax -- doing so would
+actually build a *new* function behaving like ``lambda x: x(5)(arg)``.
+You normally don't need to manually evaulate Q expressions, but if you
+do you can use the :meth:`~Expression.eval_` method.
+
+.. doctest::
+
+  >>> x = Q.upper()[0:2]
+  >>> x('testing')  # No! Builds a new function
+  Q.upper()[slice(0, 2, None)]('testing')
+  >>> x.eval_('testing')  # Yes!
+  'TE'
+
+Debugging Q expressions
+........................
+
+Despite your best efforts, you will *still* encounter messy documents
+that trigger errors in your code. Here's a simplified example:
+
+.. doctest:: qdebug
+
+  >>> html = ['<a href="/index"></a>'] * 100
+  >>> html[30] = '<a href="#"></a>'
+  >>> dom = Soupy(''.join(html))
+  >>> dom.find_all('a').each(Q['href'].split('/')[1])
+  Traceback (most recent call last):
+  ...
+  IndexError: list index out of range
+
+      Encountered when evaluating Scalar(['#'])[1]
+
+This code tries to extract the links in all ``a`` tags, but fails
+on links that don't have a slash. Debugging issues
+like this can be frustrating, because these errors are often triggered
+by rare edge cases in the document that can be hard to track down.
+
+If your errors are generated inside a Q expression (as is the case here),
+the :meth:`Q.debug_ <Expression.debug_>` method will return data to isolate
+the failure.
+
+.. doctest:: qdebug
+
+  >>> dbg = Q.debug_()
+  >>> dbg
+  QDebug(expr=Q['href'].split('/')[1], inner_expr=[1], val=Node(<a href="#"></a>), inner_val=Scalar(['#']))
+  >>> dbg.expr
+  Q['href'].split('/')[1]
+  >>> dbg.inner_expr
+  [1]
+  >>> dbg.val
+  Node(<a href="#"></a>)
+  >>> dbg.inner_val
+  Scalar(['#'])
+
+The attributes returned by ``debug_`` are the full Q expression
+that triggered the error, the specific subexpression that triggered
+the error (in this case, the ``['href']`` part), the value that
+was passed to ``full_expr``, and the value passsed to ``expr``.
+So for example we can re-trigger the error via
+
+.. doctest:: qdebug
+
+  >>> dbg.expr.eval_(dbg.val)
+  Traceback (most recent call last):
+  ...
+  IndexError: list index out of range
+
+      Encountered when evaluating Scalar(['#'])[1]
 
