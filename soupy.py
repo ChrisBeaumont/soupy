@@ -192,6 +192,13 @@ class BaseNull(Wrapper):
     def __hash__(self):
         return hash(type(self))
 
+    def __eq__(self, other):
+        return type(self)()
+
+    def __ne__(self, other):
+        return type(self)()
+
+
 
 @six.python_2_unicode_compatible
 class Some(Wrapper):
@@ -284,10 +291,13 @@ class Some(Wrapper):
         return self.map(Q.__setitem__(key, val))
 
     def __hash__(self):
-        try:
-            return hash(self._value)
-        except TypeError:
-            return id(self)
+        return hash(self._value)
+
+    def __eq__(self, other):
+        return self.map(lambda x: x == other)
+
+    def __ne__(self, other):
+        return self.map(lambda x: x != other)
 
 
 class Null(BaseNull):
@@ -298,12 +308,6 @@ class Null(BaseNull):
         return Null()
 
     def __call__(self, *args, **kwargs):
-        return Null()
-
-    def __eq__(self, other):
-        return Null()
-
-    def __ne__(self, other):
         return Null()
 
     def __gt__(self, other):
@@ -385,12 +389,6 @@ class Scalar(Some):
     def __call__(self, *args, **kwargs):
         return self.map(operator.methodcaller('__call__', *args, **kwargs))
 
-    def __eq__(self, other):
-        return self.map(lambda x: x == other)
-
-    def __ne__(self, other):
-        return self.map(lambda x: x != other)
-
     def __gt__(self, other):
         return self.map(lambda x: x > other)
 
@@ -450,10 +448,6 @@ class Scalar(Some):
         if isinstance(other, BaseNull):
             return other
         return self.map(Q / _unwrap(other))
-
-    def __hash__(self):
-        # must explicitly override for py3
-        return super(Scalar, self).__hash__()
 
 
 class Collection(Some):
@@ -994,6 +988,9 @@ class Node(NodeLike, Some):
     def prettify(self):
         return self.map(Q.prettify()).val()
 
+    def __len__(self):
+        return len(self._value)
+
     def __bool__(self):
         return True
 
@@ -1169,6 +1166,9 @@ class NullNode(NodeLike, BaseNull):
 
     def prettify(self):
         return "Null Node"
+
+    def __len__(self):
+        return 0
 
 
 def either(*funcs):

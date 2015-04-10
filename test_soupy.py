@@ -281,13 +281,6 @@ class TestScalar(object):
         assert hash(Scalar(2)) == hash(Scalar(2))
         assert hash(Some(2)) == hash(Some(2))
 
-    def test_hash_of_unhashable(self):
-        """
-        Hash falls back on id if content is unhashable
-        """
-        s = Scalar([])
-        assert hash(s) == id(s)
-
 
 class TestNull(object):
 
@@ -348,6 +341,9 @@ class TestNullNode(object):
 
     def test_str(self):
         assert str(NullNode()) == "NullNode()"
+
+    def test_len(self):
+        assert len(NullNode()) == 0
 
     def test_val_raises(self):
         with pytest.raises(NullValueError):
