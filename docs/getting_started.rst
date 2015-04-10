@@ -409,14 +409,14 @@ The third example introduces a slight twist with Q expressions. Because
 call this function using the normal ``(arg)`` syntax -- doing so would
 actually build a *new* function behaving like ``lambda x: x(5)(arg)``.
 You normally don't need to manually evaulate Q expressions, but if you
-do you can use the :meth:`~Expression.__eval__` method.
+do you can use the :meth:`~Expression.eval_` method.
 
 .. doctest::
 
   >>> x = Q.upper()[0:2]
   >>> x('testing')  # No! Builds a new function
   Q.upper()[slice(0, 2, None)]('testing')
-  >>> x.__eval__('testing')  # Yes!
+  >>> x.eval_('testing')  # Yes!
   'TE'
 
 Debugging Q expressions
@@ -468,7 +468,7 @@ So for example we can re-trigger the error via
 
 .. doctest:: qdebug
 
-  >>> dbg.expr.__eval__(dbg.val)
+  >>> dbg.expr.eval_(dbg.val)
   Traceback (most recent call last):
   ...
   IndexError: list index out of range

@@ -638,36 +638,35 @@ class TestExpression(object):
 
     def test_operators(self):
 
-        assert (Q > 1).__eval__(2)
-        assert (Q >= 1).__eval__(1)
-        assert (Q <= 1).__eval__(1)
-        assert (Q < 1).__eval__(0)
-        assert (Q == 1).__eval__(1)
-        assert (Q != 1).__eval__(2)
+        assert (Q > 1).eval_(2)
+        assert (Q >= 1).eval_(1)
+        assert (Q <= 1).eval_(1)
+        assert (Q < 1).eval_(0)
+        assert (Q == 1).eval_(1)
+        assert (Q != 1).eval_(2)
 
-        assert not (Q > 1).__eval__(1)
-        assert not (Q >= 1).__eval__(0)
-        assert not (Q <= 1).__eval__(2)
-        assert not (Q < 1).__eval__(1)
-        assert not (Q == 1).__eval__(2)
-        assert not (Q != 1).__eval__(1)
+        assert not (Q > 1).eval_(1)
+        assert not (Q >= 1).eval_(0)
+        assert not (Q <= 1).eval_(2)
+        assert not (Q < 1).eval_(1)
+        assert not (Q == 1).eval_(2)
+        assert not (Q != 1).eval_(1)
 
-        assert (Q <= Q).__eval__(5)
+        assert (Q <= Q).eval_(5)
 
-        assert (Q + 5).__eval__(2) == 7
-        assert (Q - 1).__eval__(1) == 0
-        assert (Q * 2).__eval__(4) == 8
+        assert (Q + 5).eval_(2) == 7
+        assert (Q - 1).eval_(1) == 0
+        assert (Q * 2).eval_(4) == 8
 
         if not PY3:
-            assert operator.div(Q, 2).__eval__(3) == 1
+            assert operator.div(Q, 2).eval_(3) == 1
 
-        assert operator.truediv(Q, 2).__eval__(3) == 1.5
+        assert operator.truediv(Q, 2).eval_(3) == 1.5
 
-        assert (Q / 2).__eval__(4) == 2.0
-        assert (Q // 2).__eval__(4) == 2
-        assert (Q % 2).__eval__(3) == 1
-        assert (Q ** 2).__eval__(3) == 9
-
+        assert (Q / 2).eval_(4) == 2.0
+        assert (Q // 2).eval_(4) == 2
+        assert (Q % 2).eval_(3) == 1
+        assert (Q ** 2).eval_(3) == 9
 
     @pytest.mark.parametrize(('expr', 'rep'), [
         (Q, 'Q'),
@@ -684,7 +683,7 @@ class TestExpression(object):
         (Q + 3, "Q + 3"),
         ((Q + 3) * 5, "(Q + 3) * 5"),
         (5 * (Q + 3), "5 * (Q + 3)"),
-        (Q.map(Q+3), "Q.map(Q + 3)"),
+        (Q.map(Q + 3), "Q.map(Q + 3)"),
         (Q['∂ƒ'], "Q['∂ƒ']"),
         (Q('∂ƒ'), "Q('∂ƒ')"),
         (Q[b'\xc6'], "Q['\\xc6']"),
@@ -694,7 +693,7 @@ class TestExpression(object):
         (Q(b'"\'\xc6'), "Q('\"\\\'\\xc6')"),
         (Q['"\''], "Q['\"\'']"),
         (Q[b'"\'\xc6'], "Q['\"\\\'\\xc6']"),
-        ])
+    ])
     def test_str(self, expr, rep):
         assert text_type(expr) == rep
         # repr should be ascii on py2
@@ -704,7 +703,7 @@ class TestExpression(object):
     def test_nice_exception_message(self):
         val = str('test')
         with pytest.raises(AttributeError) as exc:
-            expr = Q.upper().foo.__eval__(val)
+            Q.upper().foo.eval_(val)
         assert exc.value.args[0] == (
             "'str' object has no attribute 'foo'"
             "\n\n\tEncountered when evaluating 'TEST'.foo"
@@ -712,7 +711,7 @@ class TestExpression(object):
 
     def test_nice_exception_message_with_key_error(self):
         with pytest.raises(KeyError) as exc:
-            expr = Q[str('a')].__eval__({})
+            Q[str('a')].eval_({})
         assert str(exc.value) == (
             "'a'\n\n\tEncountered when evaluating {}['a']"
         )
@@ -720,7 +719,7 @@ class TestExpression(object):
     def test_nice_long_exception_message(self):
         val = str('a' * 500)
         with pytest.raises(AttributeError) as exc:
-            expr = Q.upper().foo.__eval__(val)
+            Q.upper().foo.eval_(val)
         assert exc.value.args[0] == (
             "'str' object has no attribute 'foo'"
             "\n\n\tEncountered when evaluating <str instance>.foo"
@@ -728,7 +727,7 @@ class TestExpression(object):
 
     def test_debug_method(self):
         with pytest.raises(AttributeError):
-            Q.upper().foo.__eval__('test')
+            Q.upper().foo.eval_('test')
 
         dbg = Q.debug_()
         assert isinstance(dbg, QDebug)
@@ -773,6 +772,7 @@ def test_collection_api():
     Collection and NullCollection have identical interfaces
     """
     assert _public_api(Collection) == _public_api(NullCollection)
+
 
 def test_dequote():
 

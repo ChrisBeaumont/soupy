@@ -1187,7 +1187,7 @@ def either(*funcs):
 
 def _helpful_failure(method):
     """
-    Decorator for __eval__ that prints a helpful error message
+    Decorator for eval_ that prints a helpful error message
     if an exception is generated in a Q expression
     """
 
@@ -1297,7 +1297,7 @@ class Expression(object):
         return BinaryOp(operator.mod, '%', self, other)
 
     @_helpful_failure
-    def __eval__(self, val):
+    def eval_(self, val):
         """
         Pass the argument ``val`` to the function, and return the result.
 
@@ -1352,7 +1352,7 @@ class Call(Expression):
         self._kwargs = kwargs
 
     @_helpful_failure
-    def __eval__(self, val):
+    def eval_(self, val):
         return val.__call__(*self._args, **self._kwargs)
 
     def __str__(self):
@@ -1372,14 +1372,14 @@ class BinaryOp(Expression):
         self.symbol = symbol
 
     @_helpful_failure
-    def __eval__(self, val):
+    def eval_(self, val):
         left = self.left
         right = self.right
         if isinstance(left, Expression):
-            left = left.__eval__(val)
+            left = left.eval_(val)
 
         if isinstance(right, Expression):
-            right = right.__eval__(val)
+            right = right.eval_(val)
 
         return self.op(left, right)
 
@@ -1400,7 +1400,7 @@ class Attr(Expression):
         self._name = attribute_name
 
     @_helpful_failure
-    def __eval__(self, val):
+    def eval_(self, val):
         return operator.attrgetter(self._name)(val)
 
     def __str__(self):
@@ -1414,7 +1414,7 @@ class GetItem(Expression):
         self._name = key
 
     @_helpful_failure
-    def __eval__(self, val):
+    def eval_(self, val):
         return operator.itemgetter(self._name)(val)
 
     def __str__(self):
@@ -1432,9 +1432,9 @@ class Chain(Expression):
             yield item
 
     @_helpful_failure
-    def __eval__(self, val):
+    def eval_(self, val):
         for item in self._items:
-            val = item.__eval__(val)
+            val = item.eval_(val)
         return val
 
     def __str__(self):
@@ -1442,9 +1442,9 @@ class Chain(Expression):
 
 
 def _make_callable(func):
-    # If func is an expression, we call via __eval__
+    # If func is an expression, we call via eval_
     # otherwise, we call func directly
-    return getattr(func, '__eval__', func)
+    return getattr(func, 'eval_', func)
 
 
 def _unwrap(val):
