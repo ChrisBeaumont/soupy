@@ -21,8 +21,9 @@ __all__ = ['Soupy', 'Q', 'Node', 'Scalar', 'Collection',
 # extract the thing inside string reprs (eg u'abc' -> abc)
 QUOTED_STR = re.compile("^[ub]?['\"](.*?)['\"]$")
 
-QDebug = namedtuple('QDebug', ('full_expr', 'expr', 'val'))
+QDebug = namedtuple('QDebug', ('expr', 'inner_expr', 'val', 'inner_val'))
 """Namedtuple that holds information about a failed expression evaluation."""
+
 
 @six.add_metaclass(ABCMeta)
 class Wrapper(object):
@@ -1198,10 +1199,11 @@ def _helpful_failure(method):
             exc_cls, inst, tb = sys.exc_info()
 
             if hasattr(inst, '_RERAISE'):
-                Q.__debug_info__ = QDebug(self, *Q.__debug_info__[1:])
+                _, expr, _, inner_val = Q.__debug_info__
+                Q.__debug_info__ = QDebug(self, expr, val, inner_val)
                 raise
 
-            if issubclass(exc_cls, KeyError):
+            if issubclass(exc_cls, KeyError):  # Overrides formatting
                 exc_cls = QKeyError
 
             # Show val, unless it's too long
@@ -1214,7 +1216,7 @@ def _helpful_failure(method):
 
             new_exc = exc_cls(msg)
             new_exc._RERAISE = True
-            Q.__debug_info__ = QDebug(self, self, val)
+            Q.__debug_info__ = QDebug(self, self, val, val)
 
             six.reraise(exc_cls, new_exc, tb)
 
@@ -1309,13 +1311,14 @@ class Expression(object):
         Returns debugging information for the previous error raised
         during expression evaluation.
 
-        Returns a QDebug namedtuple with three fields:
+        Returns a QDebug namedtuple with four fields:
 
-          - full_expr is the last full expression to have raised an exception
-          - expr is the specific sub-expression that raised the exception
+          - expr is the last full expression to have raised an exception
+          - inner_expr is the specific sub-expression that raised the exception
           - val is the value that expr tried to evaluate.
+          - inner_val is the value that inner_expr tried to evaluate
 
-        If no exceptions have been triggered from expresison evaluation,
+        If no exceptions have been triggered from expression evaluation,
         then each field is None.
 
         Examples:
@@ -1326,17 +1329,19 @@ class Expression(object):
             AttributeError: 'str' object has no attribute 'foo'
             ...
             >>> dbg = Q.debug_()
-            >>> dbg.full_expr
-            Q.upper().foo
             >>> dbg.expr
+            Q.upper().foo
+            >>> dbg.inner_expr
             .foo
             >>> dbg.val
+            'test'
+            >>> dbg.inner_val
             'TEST'
         """
         result = self.__debug_info__
         if isinstance(result, QDebug):
             return result
-        return QDebug(None, None, None)
+        return QDebug(None, None, None, None)
 
 
 @six.python_2_unicode_compatible

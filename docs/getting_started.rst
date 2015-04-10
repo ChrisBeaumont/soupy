@@ -428,17 +428,17 @@ that trigger errors in your code. Here's a simplified example:
 .. doctest:: qdebug
 
   >>> html = ['<a href="/index"></a>'] * 100
-  >>> html[30] = '<a></a>'
+  >>> html[30] = '<a href="#"></a>'
   >>> dom = Soupy(''.join(html))
-  >>> dom.find_all('a').each(Q['href'].upper())
+  >>> dom.find_all('a').each(Q['href'].split('/')[1])
   Traceback (most recent call last):
   ...
-  KeyError: 'href'
+  IndexError: list index out of range
 
-      Encountered when evaluating Node(<a></a>)['href']
+      Encountered when evaluating Scalar(['#'])[1]
 
 This code tries to extract the links in all ``a`` tags, but fails
-on links that don't define the ``href`` attribute. Debugging issues
+on links that don't have a slash. Debugging issues
 like this can be frustrating, because these errors are often triggered
 by rare edge cases in the document that can be hard to track down.
 
@@ -450,25 +450,28 @@ the failure.
 
   >>> dbg = Q.debug_()
   >>> dbg
-  QDebug(full_expr=Q['href'].upper(), expr=['href'], val=Node(<a></a>))
-  >>> dbg.full_expr
-  Q['href'].upper()
+  QDebug(expr=Q['href'].split('/')[1], inner_expr=[1], val=Node(<a href="#"></a>), inner_val=Scalar(['#']))
   >>> dbg.expr
-  ['href']
+  Q['href'].split('/')[1]
+  >>> dbg.inner_expr
+  [1]
   >>> dbg.val
-  Node(<a></a>)
+  Node(<a href="#"></a>)
+  >>> dbg.inner_val
+  Scalar(['#'])
 
-The three attributes returned by ``debug_`` are the full Q expression
+The attributes returned by ``debug_`` are the full Q expression
 that triggered the error, the specific subexpression that triggered
-the error (in this case, the ``['href']`` part), and the value passed
-to the Q expression. So for example we can re-trigger the error via
+the error (in this case, the ``['href']`` part), the value that
+was passed to ``full_expr``, and the value passsed to ``expr``.
+So for example we can re-trigger the error via
 
 .. doctest:: qdebug
 
   >>> dbg.expr.__eval__(dbg.val)
   Traceback (most recent call last):
   ...
-  KeyError: 'href'
+  IndexError: list index out of range
 
-      Encountered when evaluating Node(<a></a>)['href']
+      Encountered when evaluating Scalar(['#'])[1]
 

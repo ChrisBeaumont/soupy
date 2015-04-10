@@ -701,7 +701,6 @@ class TestExpression(object):
         if not PY3:
             assert repr(expr).encode('ascii')
 
-
     def test_nice_exception_message(self):
         val = str('test')
         with pytest.raises(AttributeError) as exc:
@@ -709,6 +708,13 @@ class TestExpression(object):
         assert exc.value.args[0] == (
             "'str' object has no attribute 'foo'"
             "\n\n\tEncountered when evaluating 'TEST'.foo"
+        )
+
+    def test_nice_exception_message_with_key_error(self):
+        with pytest.raises(KeyError) as exc:
+            expr = Q[str('a')].__eval__({})
+        assert str(exc.value) == (
+            "'a'\n\n\tEncountered when evaluating {}['a']"
         )
 
     def test_nice_long_exception_message(self):
@@ -726,16 +732,17 @@ class TestExpression(object):
 
         dbg = Q.debug_()
         assert isinstance(dbg, QDebug)
-        assert repr(dbg.full_expr) == 'Q.upper().foo'
-        assert repr(dbg.expr) == '.foo'
-        assert dbg.val == 'TEST'
+        assert repr(dbg.expr) == 'Q.upper().foo'
+        assert repr(dbg.inner_expr) == '.foo'
+        assert dbg.val == 'test'
+        assert dbg.inner_val == 'TEST'
 
     def test_debug_method_empty(self):
         del Q.__debug_info__
         dbg = Q.debug_()
 
         assert isinstance(dbg, QDebug)
-        assert dbg == (None, None, None)
+        assert dbg == (None, None, None, None)
 
 
 def _public_api(cls):
