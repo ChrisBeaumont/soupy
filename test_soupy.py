@@ -274,8 +274,26 @@ class TestScalar(object):
         s['b'] = 2
         assert s.val() == {'a': 1, 'b': 2}
 
+    def test_hash(self):
+        """
+        wrappers are hashed by their content
+        """
+        assert hash(Scalar(2)) == hash(Scalar(2))
+
+    def test_hash_of_unhashable(self):
+        """
+        Hash falls back on id if content is unhashable
+        """
+        s = Scalar([])
+        assert hash(s) == id(s)
+
 
 class TestNull(object):
+
+    def test_hash(self):
+        # hashing uses the type
+        assert hash(Null()) == hash(Null())
+        assert hash(Null()) != hash(NullNode())
 
     def test_call(self):
         assert isinstance(Null()(), Null)

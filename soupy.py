@@ -189,6 +189,9 @@ class BaseNull(Wrapper):
 
     __repr__ = __str__
 
+    def __hash__(self):
+        return hash(type(self))
+
 
 @six.python_2_unicode_compatible
 class Some(Wrapper):
@@ -279,6 +282,12 @@ class Some(Wrapper):
 
     def __setitem__(self, key, val):
         return self.map(Q.__setitem__(key, val))
+
+    def __hash__(self):
+        try:
+            return hash(self._value)
+        except TypeError:
+            return id(self)
 
 
 class Null(BaseNull):
