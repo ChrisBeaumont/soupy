@@ -113,6 +113,7 @@ class Wrapper(object):
 
 
 class NullValueError(ValueError):
+
     """
     The NullValueError exception is raised when attempting
     to extract values from Null objects
@@ -121,10 +122,12 @@ class NullValueError(ValueError):
 
 
 class QKeyError(KeyError):
+
     """
     A custom KeyError subclass that better formats
     exception messages raised inside expressions
     """
+
     def __str__(self):
         parts = self.args[0].split('\n\n\t')
         return parts[0] + '\n\n\t' + _dequote(repr(parts[1]))
@@ -197,7 +200,6 @@ class BaseNull(Wrapper):
 
     def __ne__(self, other):
         return type(self)()
-
 
 
 @six.python_2_unicode_compatible
@@ -301,9 +303,11 @@ class Some(Wrapper):
 
 
 class Null(BaseNull):
+
     """
     The class for ill-defined Scalars.
     """
+
     def __getattr__(self, attr):
         return Null()
 
@@ -486,14 +490,32 @@ class Collection(Some):
         """
         return (item.val() for item in self._items)
 
-    def each(self, func):
+    def each(self, *funcs):
         """
-        Call `func` on each element in the collection
+        Call `func` on each element in the collection.
+
+        If multiple functions are provided, each item
+        in the result will be a tuple of each
+        func(item) result.
 
         Returns a new Collection.
+
+        Example:
+
+            >>> col = Collection([Scalar(1), Scalar(2)])
+            >>> col.each(Q * 10)
+            Collection([Scalar(10), Scalar(20)])
+            >>> col.each(Q * 10, Q - 1)
+            Collection([Scalar((10, 0)), Scalar((20, 1))])
         """
-        func = _make_callable(func)
-        return Collection(map(func, self._items))
+
+        funcs = list(map(_make_callable, funcs))
+
+        if len(funcs) == 1:
+            return Collection(map(funcs[0], self._items))
+
+        tupler = lambda item: Scalar(tuple(_unwrap(func(item)) for func in funcs))
+        return Collection(map(tupler, self._items))
 
     def filter(self, func):
         """
@@ -1241,11 +1263,13 @@ def _helpful_failure(method):
 
 @six.python_2_unicode_compatible
 class Expression(object):
+
     """
     Soupy expressions are a shorthand for building single-argument functions.
 
     Users should use the ``Q`` object, which is just an instance of Expression.
     """
+
     def __str__(self):
         return 'Q'
 
@@ -1362,7 +1386,9 @@ class Expression(object):
 
 @six.python_2_unicode_compatible
 class Call(Expression):
+
     """An expression for calling a function or method"""
+
     def __init__(self, args, kwargs):
         self._args = args
         self._kwargs = kwargs
@@ -1380,7 +1406,9 @@ class Call(Expression):
 
 @six.python_2_unicode_compatible
 class BinaryOp(Expression):
+
     """A binary operation"""
+
     def __init__(self, op, symbol, left, right):
         self.op = op
         self.left = left
@@ -1411,7 +1439,9 @@ class BinaryOp(Expression):
 
 @six.python_2_unicode_compatible
 class Attr(Expression):
+
     """An expression for fetching an attribute (eg, obj.item)"""
+
     def __init__(self, attribute_name):
         self._name = attribute_name
 
@@ -1425,7 +1455,9 @@ class Attr(Expression):
 
 @six.python_2_unicode_compatible
 class GetItem(Expression):
+
     """An expression for getting an item (eg, obj['item'])"""
+
     def __init__(self, key):
         self._name = key
 
@@ -1439,7 +1471,9 @@ class GetItem(Expression):
 
 @six.python_2_unicode_compatible
 class Chain(Expression):
+
     """An chain of expressions (eg a.b.c)"""
+
     def __init__(self, items):
         self._items = items
 
