@@ -495,8 +495,8 @@ class Collection(Some):
         Call `func` on each element in the collection.
 
         If multiple functions are provided, each item
-        in the result will be a tuple of each
-        func(item) result.
+        in the output will be a tuple of each
+        func(item) in self.
 
         Returns a new Collection.
 
@@ -514,7 +514,8 @@ class Collection(Some):
         if len(funcs) == 1:
             return Collection(map(funcs[0], self._items))
 
-        tupler = lambda item: Scalar(tuple(_unwrap(func(item)) for func in funcs))
+        tupler = lambda item: Scalar(
+            tuple(_unwrap(func(item)) for func in funcs))
         return Collection(map(tupler, self._items))
 
     def filter(self, func):
