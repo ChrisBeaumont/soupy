@@ -151,10 +151,12 @@ class TestNode(object):
 
 
 class TestNavigableString(object):
+
     """
     NavigableStringS do not support all the methods of TagS
     in BeautifulSoup. Test that we handle them gracefully
     """
+
     def setup_method(self, method):
         self.node = Node(BeautifulSoup('<b>hi</b>').b.contents[0])
 
@@ -184,6 +186,7 @@ class TestNavigableString(object):
 
 
 class TestScalar(object):
+
     def test_eq(self):
         assert (Scalar('test') == 'test').val()
 
@@ -439,6 +442,12 @@ class TestCollection(object):
         result = node.find_all('a').each(Q.text.map(int)).val()
         assert result == [1, 2, 3]
 
+    def test_multi_each(self):
+        node = self.node
+        result = node.find_all('a').each(Q.text.map(int),
+                                         Q.text).val()
+        assert result == [(1, '1'), (2, '2'), (3, '3')]
+
     def test_filter(self):
         node = self.node
         result = node.find_all('a').filter(Q.text.map(int) > 1).val()
@@ -557,6 +566,7 @@ class TestNullCollection(object):
 
 
 class TestQueries(object):
+
     def test_simple_dump(self):
         node = Soupy('<a>1</a><a>2</a><a>3</a>')
 
