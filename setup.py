@@ -1,5 +1,4 @@
 from distutils.core import setup
-
 try:
     import pypandoc
     LONG_DESCRIPTION = pypandoc.convert('README.md', 'rst')
@@ -10,7 +9,7 @@ except (IOError, ImportError):
 setup(
     name='soupy',
     py_modules=['soupy'],
-    version='0.3.dev',
+    version='0.3',
     long_description=LONG_DESCRIPTION,
     description='Easier wrangling of web documents',
     author='chrisnbeaumont@gmail.com',

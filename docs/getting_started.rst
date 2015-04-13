@@ -419,8 +419,11 @@ do you can use the :meth:`~Expression.eval_` method.
   >>> x.eval_('testing')  # Yes!
   'TE'
 
+.. _q_debug:
+
 Debugging Q expressions
 ........................
+
 
 Despite your best efforts, you will *still* encounter messy documents
 that trigger errors in your code. Here's a simplified example:

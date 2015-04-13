@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup, PageElement, NavigableString
 import six
 from six.moves import map
 
+__version__ = '0.3'
 
 __all__ = ['Soupy', 'Q', 'Node', 'Scalar', 'Collection',
            'Null', 'NullNode', 'NullCollection',
