@@ -9,7 +9,7 @@ except (IOError, ImportError):
 setup(
     name='soupy',
     py_modules=['soupy'],
-    version='0.3',
+    version='0.4.dev',
     long_description=LONG_DESCRIPTION,
     description='Easier wrangling of web documents',
     author='chrisnbeaumont@gmail.com',
