@@ -11,6 +11,7 @@ Main Wrapper Classes
    :members:
 
    .. automethod:: dump
+   .. automethod:: isnull
    .. automethod:: val
    .. automethod:: orelse
    .. automethod:: nonnull
