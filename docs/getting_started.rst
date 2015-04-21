@@ -453,7 +453,7 @@ the failure.
 
   >>> dbg = Q.debug_()
   >>> dbg
-  QDebug(expr=Q['href'].split('/')[1], inner_expr=[1], val=Node(<a href="#"></a>), inner_val=Scalar(['#']))
+  QDebug(expr=Q['href'].split('/')[1], inner_expr=[1], val=Node(<a href="#"></a>), inner_val=Scalar([u'#']))
   >>> dbg.expr
   Q['href'].split('/')[1]
   >>> dbg.inner_expr
@@ -461,7 +461,7 @@ the failure.
   >>> dbg.val
   Node(<a href="#"></a>)
   >>> dbg.inner_val
-  Scalar(['#'])
+  Scalar([u'#'])
 
 The attributes returned by ``debug_`` are the full Q expression
 that triggered the error, the specific subexpression that triggered

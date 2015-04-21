@@ -59,7 +59,7 @@ class Wrapper(object):
 
     @abstractmethod
     def isnull(self):
-        pass
+        pass  # pragma: no cover
 
     @abstractmethod
     def map(self, func):
@@ -938,7 +938,7 @@ class Node(NodeLike, Some):
         Example:
 
             >>> Soupy("<a val=3></a>").find('a').attrs
-            Scalar({'val': '3'})
+            Scalar({u'val': u'3'})
         """
         return self._wrap_scalar(operator.attrgetter('attrs'))
 
@@ -969,7 +969,7 @@ class Node(NodeLike, Some):
             >>> node
             Node(<p>hi there</p>)
             >>> node.name
-            Scalar('p')
+            Scalar(u'p')
         """
         return self._wrap_scalar(operator.attrgetter('name'))
 
