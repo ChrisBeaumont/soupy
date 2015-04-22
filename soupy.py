@@ -58,6 +58,10 @@ class Wrapper(object):
         return self
 
     @abstractmethod
+    def isnull(self):
+        pass  # pragma: no cover
+
+    @abstractmethod
     def map(self, func):
         pass  # pragma: no cover
 
@@ -180,6 +184,12 @@ class BaseNull(Wrapper):
         """
         raise NullValueError()
 
+    def isnull(self):
+        """
+        Return Scalar(True) if this item is a null value
+        """
+        return Scalar(True)
+
     def __setitem__(self, key, val):
         pass
 
@@ -281,6 +291,12 @@ class Some(Wrapper):
         if self.apply(func):
             return self
         raise NullValueError(msg)
+
+    def isnull(self):
+        """
+        Return Scalar(True) if this item is a null value
+        """
+        return Scalar(False)
 
     def __str__(self):
         # returns unicode
@@ -519,13 +535,40 @@ class Collection(Some):
             tuple(_unwrap(func(item)) for func in funcs))
         return Collection(map(tupler, self._items))
 
-    def filter(self, func):
+    def exclude(self, func=None):
+        """
+        Return a new Collection excluding some items
+
+        Parameters:
+
+            func : function(Node) -> Scalar
+
+                A function that, when called on each item
+                in the collection, returns a boolean-like
+                value. If no function is provided, then
+                truthy items will be removed.
+
+        Returns:
+
+            A new Collection consisting of the items
+            where bool(func(item)) == False
+        """
+        func = _make_callable(func)
+        inverse = lambda x: not func(x)
+        return self.filter(inverse)
+
+    def filter(self, func=None):
         """
         Return a new Collection with some items removed.
 
         Parameters:
 
-            func : function(Node) -> Node
+            func : function(Node) -> Scalar
+
+                A function that, when called on each item
+                in the collection, returns a boolean-like
+                value. If no function is provided, then
+                false-y items will be removed.
 
         Returns:
 
@@ -539,7 +582,7 @@ class Collection(Some):
         func = _make_callable(func)
         return Collection(filter(func, self._items))
 
-    def takewhile(self, func):
+    def takewhile(self, func=None):
         """
         Return a new Collection with the last few items removed.
 
@@ -560,7 +603,7 @@ class Collection(Some):
         func = _make_callable(func)
         return Collection(takewhile(func, self._items))
 
-    def dropwhile(self, func):
+    def dropwhile(self, func=None):
         """
         Return a new Collection with the first few items removed.
 
@@ -701,13 +744,13 @@ class NullCollection(BaseNull, Collection):
     def each(self, func):
         return self
 
-    def filter(self, func):
+    def filter(self, func=None):
         return self
 
-    def takewhile(self, func):
+    def takewhile(self, func=None):
         return self
 
-    def dropwhile(self, func):
+    def dropwhile(self, func=None):
         return self
 
     def first(self):
@@ -895,7 +938,7 @@ class Node(NodeLike, Some):
         Example:
 
             >>> Soupy("<a val=3></a>").find('a').attrs
-            Scalar({'val': '3'})
+            Scalar({u'val': u'3'})
         """
         return self._wrap_scalar(operator.attrgetter('attrs'))
 
@@ -926,7 +969,7 @@ class Node(NodeLike, Some):
             >>> node
             Node(<p>hi there</p>)
             >>> node.name
-            Scalar('p')
+            Scalar(u'p')
         """
         return self._wrap_scalar(operator.attrgetter('name'))
 
@@ -1496,6 +1539,8 @@ class Chain(Expression):
 def _make_callable(func):
     # If func is an expression, we call via eval_
     # otherwise, we call func directly
+    if func is None:
+        func = Q
     return getattr(func, 'eval_', func)
 
 

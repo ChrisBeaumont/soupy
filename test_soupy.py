@@ -214,6 +214,9 @@ class TestScalar(object):
     def test_getkey(self):
         assert Scalar({'a': 1})['a'].val() == 1
 
+    def test_isnull(self):
+        assert not Scalar(1).isnull()
+
     def test_arithmetic(self):
 
         c = Scalar(1)
@@ -399,6 +402,9 @@ class TestNullNode(object):
 
         assert NullNode().prettify() == "Null Node"
 
+    def test_isnull(self):
+        assert NullNode().isnull()
+
 
 class TestCollection(object):
 
@@ -451,6 +457,16 @@ class TestCollection(object):
     def test_filter(self):
         node = self.node
         result = node.find_all('a').filter(Q.text.map(int) > 1).val()
+        assert len(result) == 2
+
+    def test_filter(self):
+        node = self.node
+        result = node.find_all('a').exclude(Q.text.map(int) > 1).val()
+        assert len(result) == 1
+
+    def test_filter_noarg(self):
+        node = self.node
+        result = node.find_all('a').each(Q.text.map(int) > 1).filter().val()
         assert len(result) == 2
 
     def test_takewhile(self):
