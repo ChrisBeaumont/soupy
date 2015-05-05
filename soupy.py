@@ -2,15 +2,24 @@ from __future__ import print_function, division, unicode_literals
 
 from abc import ABCMeta, abstractproperty, abstractmethod
 from collections import namedtuple
+from distutils.version import LooseVersion
 from functools import wraps
 from itertools import takewhile, dropwhile
 import operator
 import re
 import sys
 
-from bs4 import BeautifulSoup, PageElement, NavigableString
-import six
-from six.moves import map
+try:
+    from bs4 import BeautifulSoup, PageElement, NavigableString
+except ImportError:  # pragma: no cover
+    raise ImportError("Soupy requires beautifulsoup4")
+
+try:
+    import six
+    from six.moves import map
+    assert LooseVersion(six.__version__) >= LooseVersion('1.9')
+except(ImportError, AssertionError):   # pragma: no cover
+    raise ImportError("Soupy requires six version 1.9 or later")
 
 __version__ = '0.4.dev'
 
