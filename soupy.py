@@ -11,16 +11,15 @@ import sys
 
 try:
     from bs4 import BeautifulSoup, PageElement, NavigableString
-except ImportError:
-    raise ImportError("Soupy requires beautifulsoup4")  # pragma: no cover
+except ImportError:  # pragma: no cover
+    raise ImportError("Soupy requires beautifulsoup4")
 
 try:
     import six
     from six.moves import map
     assert LooseVersion(six.__version__) >= LooseVersion('1.9')
-except(ImportError, AssertionError):
-    raise ImportError(
-        "Soupy requires six version 1.9 or later")  # pragma: no cover
+except(ImportError, AssertionError):   # pragma: no cover
+    raise ImportError("Soupy requires six version 1.9 or later")
 
 __version__ = '0.4.dev'
 
