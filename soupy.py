@@ -95,7 +95,7 @@ class Wrapper(object):
     def __getitem__(self, key):
         return self.map(operator.itemgetter(key))
 
-    def dump(self, **kwargs):
+    def dump(self, *args, **kwargs):
         """
         Extract derived values into a Scalar(dict)
 
@@ -117,8 +117,14 @@ class Wrapper(object):
             >>> data == {'text': 'hi', 'name': 'b'}
             True
         """
-        result = dict((name, _unwrap(self.apply(func)))
-                      for name, func in kwargs.items())
+        if args and kwargs:
+            raise ValueError('Cannot pass both arguments and keywords to dump')
+
+        if args:
+            result = tuple(_unwrap(self.apply(func)) for func in args)
+        else:
+            result = dict((name, _unwrap(self.apply(func)))
+                          for name, func in kwargs.items())
         return Wrapper.wrap(result)
 
     @abstractmethod
