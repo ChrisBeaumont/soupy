@@ -97,24 +97,32 @@ class Wrapper(object):
 
     def dump(self, *args, **kwargs):
         """
-        Extract derived values into a Scalar(dict)
+        Extract derived values into a Scalar(tuple) or Scalar(dict)
 
         The keyword names passed to this function become keys in
-        the resulting dictionary.
+        the resulting dictionary, while positional arguments passed to
+        this function become elements in the resulting tuple.
 
-        The keyword values are functions that are called on this Node.
+        The positional arguments and keyword values are functions that
+        are called on this Node.
 
         Notes:
 
             - The input functions are called on the Node, **not** the
               underlying BeautifulSoup element
             - If the function returns a wrapper, it will be unwrapped
+            - Only either positional arguments or keyword arguments may
+              be passed, not both.
 
         Example:
 
             >>> soup = Soupy("<b>hi</b>").find('b')
             >>> data = soup.dump(name=Q.name, text=Q.text).val()
             >>> data == {'text': 'hi', 'name': 'b'}
+            True
+
+            >> name, text = soup.dump(Q.name, Q.text).val()
+            >> (name, text) == ('hi', 'b')
             True
         """
         if args and kwargs:
