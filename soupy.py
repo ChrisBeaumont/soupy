@@ -666,7 +666,7 @@ class Collection(Some):
             >>> c.dump(x2=Q*2, m1=Q-1).val()
             [{'x2': 2, 'm1': 0}, {'x2': 4, 'm1': 1}]
         """
-        return self.each(Q.dump(**kwargs))
+        return self.each(Q.dump(*args, **kwargs))
 
     def __len__(self):
         return self.map(len).val()
@@ -786,7 +786,7 @@ class NullCollection(BaseNull, Collection):
         # slice
         return self
 
-    def dump(self, **kwargs):
+    def dump(self, *args, **kwargs):
         return NullCollection()
 
     def count(self):
@@ -1248,7 +1248,7 @@ class NullNode(NodeLike, BaseNull):
         """
         return NullCollection()
 
-    def dump(self, **kwargs):
+    def dump(self, *args, **kwargs):
         """
         Returns :class:`Null`
         """

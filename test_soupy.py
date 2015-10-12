@@ -586,9 +586,14 @@ class TestQueries(object):
     def test_simple_dump(self):
         node = Soupy('<a>1</a><a>2</a><a>3</a>')
 
-        result = node.find_all('a').dump(
-            a=Q.text).val()
+        result = node.find_all('a').dump(a=Q.text).val()
         assert result == [{'a': '1'}, {'a': '2'}, {'a': '3'}]
+
+        result = node.find_all('a').dump(Q.text).val()
+        assert result == [('1',), ('2',), ('3',)]
+
+        with pytest.raises(ValueError):
+            node.find('a').dump(Q.text, a=Q.text)
 
     def test_dump_with_method(self):
         node = Soupy('<a>1</a><a>2</a><a>3</a>')
