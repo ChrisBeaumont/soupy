@@ -95,20 +95,24 @@ class Wrapper(object):
     def __getitem__(self, key):
         return self.map(operator.itemgetter(key))
 
-    def dump(self, **kwargs):
+    def dump(self, *args, **kwargs):
         """
-        Extract derived values into a Scalar(dict)
+        Extract derived values into a Scalar(tuple) or Scalar(dict)
 
         The keyword names passed to this function become keys in
-        the resulting dictionary.
+        the resulting dictionary, while positional arguments passed to
+        this function become elements in the resulting tuple.
 
-        The keyword values are functions that are called on this Node.
+        The positional arguments and keyword values are functions that
+        are called on this Node.
 
         Notes:
 
             - The input functions are called on the Node, **not** the
               underlying BeautifulSoup element
             - If the function returns a wrapper, it will be unwrapped
+            - Only either positional arguments or keyword arguments may
+              be passed, not both.
 
         Example:
 
@@ -116,9 +120,19 @@ class Wrapper(object):
             >>> data = soup.dump(name=Q.name, text=Q.text).val()
             >>> data == {'text': 'hi', 'name': 'b'}
             True
+
+            >> name, text = soup.dump(Q.name, Q.text).val()
+            >> (name, text) == ('hi', 'b')
+            True
         """
-        result = dict((name, _unwrap(self.apply(func)))
-                      for name, func in kwargs.items())
+        if args and kwargs:
+            raise ValueError('Cannot pass both arguments and keywords to dump')
+
+        if args:
+            result = tuple(_unwrap(self.apply(func)) for func in args)
+        else:
+            result = dict((name, _unwrap(self.apply(func)))
+                          for name, func in kwargs.items())
         return Wrapper.wrap(result)
 
     @abstractmethod
@@ -652,7 +666,7 @@ class Collection(Some):
             >>> c.dump(x2=Q*2, m1=Q-1).val()
             [{'x2': 2, 'm1': 0}, {'x2': 4, 'm1': 1}]
         """
-        return self.each(Q.dump(**kwargs))
+        return self.each(Q.dump(*args, **kwargs))
 
     def __len__(self):
         return self.map(len).val()
@@ -772,7 +786,7 @@ class NullCollection(BaseNull, Collection):
         # slice
         return self
 
-    def dump(self, **kwargs):
+    def dump(self, *args, **kwargs):
         return NullCollection()
 
     def count(self):
@@ -1234,7 +1248,7 @@ class NullNode(NodeLike, BaseNull):
         """
         return NullCollection()
 
-    def dump(self, **kwargs):
+    def dump(self, *args, **kwargs):
         """
         Returns :class:`Null`
         """
